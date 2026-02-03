@@ -1,10 +1,5 @@
 import superuser_db from '../../config/dbcon';
-import cryptoModule2 from 'crypto';
-
-// Hash password function
-const hashPassword2 = (password: string) => {
-  return cryptoModule2.createHash('sha256').update(password).digest('hex');
-};
+import { hashPassword, comparePasswords, validatePasswordStrength } from '../../config/password';
 
 export const getAllSuperusers = async (req: any, res: any) => {
   try {
@@ -49,13 +44,20 @@ export const createSuperuser = async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username already exists' });
     }
 
-    // Store password as plain text without encryption
+    // Validate and hash password
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: 'Password does not meet requirements', details: passwordValidation.errors });
+    }
+
+    const hashedPassword = await hashPassword(password);
+    
     // Normalize status to match enum values (Active, Inactive, Suspended)
     const normalizedStatus = status ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() : 'Active';
     const serializedPermissions = JSON.stringify(permissions ?? {});
     const result = await superuser_db.query(
       'INSERT INTO superusers (center_id, username, email, password_hash, first_name, last_name, `role`, permissions, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [center_id, username, email, password, first_name, last_name, role || 'Admin', serializedPermissions, normalizedStatus]
+      [center_id, username, email, hashedPassword, first_name, last_name, role || 'Admin', serializedPermissions, normalizedStatus]
     );
     const created = await superuser_db.query(
       'SELECT superuser_id, center_id, username, email, first_name, last_name, `role`, status, created_at FROM superusers WHERE superuser_id = ?',
@@ -132,8 +134,9 @@ export const login = async (req: any, res: any) => {
       return res.status(403).json({ error: 'Account is not active' });
     }
 
-    const password_hash = password;
-    if (password_hash !== superuser.password_hash) {
+    // Compare passwords using bcrypt
+    const isPasswordValid = await comparePasswords(password, superuser.password_hash);
+    if (!isPasswordValid) {
       // Update login attempts
       await superuser_db.query('UPDATE superusers SET login_attempts = login_attempts + 1 WHERE superuser_id = ?', [superuser.superuser_id]);
       return res.status(401).json({ error: 'Invalid username or password' });

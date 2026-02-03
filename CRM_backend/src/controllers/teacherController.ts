@@ -1,10 +1,5 @@
 import pool from '../../config/dbcon';
-import cryptoModule from 'crypto';
-
-// Hash password function
-const hashPassword = (password: string) => {
-  return cryptoModule.createHash('sha256').update(password).digest('hex');
-};
+import { hashPassword, comparePasswords, validatePasswordStrength } from '../../config/password';
 
 export const getAllTeachers = async (req: any, res: any) => {
   try {
@@ -100,8 +95,8 @@ export const teacherLogin = async (req: any, res: any) => {
       return res.status(403).json({ error: 'Teacher account is not active' });
     }
 
-    const password_hash = hashPassword(password);
-    if (password_hash !== teacher.password_hash) {
+    const isPasswordValid = await comparePasswords(password, teacher.password_hash);
+    if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
@@ -129,15 +124,20 @@ export const setTeacherPassword = async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const password_hash = hashPassword(password);
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: 'Password does not meet strength requirements', details: passwordValidation.errors });
+    }
+
     const existing = await pool.query('SELECT teacher_id FROM teachers WHERE teacher_id = ?', [id]);
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Teacher not found' });
     }
 
+    const hashedPassword = await hashPassword(password);
     await pool.query(
       'UPDATE teachers SET username = ?, password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE teacher_id = ?',
-      [username, password_hash, id]
+      [username, hashedPassword, id]
     );
     const updated = await pool.query('SELECT teacher_id, username, email FROM teachers WHERE teacher_id = ?', [id]);
 
@@ -162,12 +162,17 @@ export const changeTeacherPassword = async (req: any, res: any) => {
       return res.status(404).json({ error: 'Teacher not found' });
     }
 
-    const old_hash = hashPassword(old_password);
-    if (old_hash !== result.rows[0].password_hash) {
+    const isCurrentPasswordValid = await comparePasswords(old_password, result.rows[0].password_hash);
+    if (!isCurrentPasswordValid) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    const new_hash = hashPassword(new_password);
+    const passwordValidation = validatePasswordStrength(new_password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: 'New password does not meet strength requirements', details: passwordValidation.errors });
+    }
+
+    const new_hash = await hashPassword(new_password);
     await pool.query('UPDATE teachers SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE teacher_id = ?', [new_hash, id]);
     
     res.json({ message: 'Password changed successfully' });

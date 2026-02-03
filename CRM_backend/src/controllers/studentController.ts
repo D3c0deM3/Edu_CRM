@@ -1,10 +1,5 @@
 import student_db from '../../config/dbcon';
-import cryptoModule1 from 'crypto';
-
-// Hash password function
-const hashPassword1 = (password: string) => {
-  return cryptoModule1.createHash('sha256').update(password).digest('hex');
-};
+import { hashPassword, comparePasswords, validatePasswordStrength } from '../../config/password';
 
 export const getAllStudents = async (req: any, res: any) => {
   try {
@@ -100,8 +95,8 @@ export const studentLogin = async (req: any, res: any) => {
       return res.status(403).json({ error: 'Student account is not active' });
     }
 
-    const password_hash = hashPassword1(password);
-    if (password_hash !== student.password_hash) {
+    const isPasswordValid = await comparePasswords(password, student.password_hash);
+    if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
@@ -129,15 +124,20 @@ export const setStudentPassword = async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    // Store password as plain text without encryption
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: 'Password does not meet strength requirements', details: passwordValidation.errors });
+    }
+
     const existing = await student_db.query('SELECT student_id FROM students WHERE student_id = ?', [id]);
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
 
+    const hashedPassword = await hashPassword(password);
     await student_db.query(
       'UPDATE students SET username = ?, password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE student_id = ?',
-      [username, password, id]
+      [username, hashedPassword, id]
     );
     const updated = await student_db.query('SELECT student_id, username, email FROM students WHERE student_id = ?', [id]);
 
@@ -162,12 +162,17 @@ export const changeStudentPassword = async (req: any, res: any) => {
       return res.status(404).json({ error: 'Student not found' });
     }
 
-    const old_hash = hashPassword1(old_password);
-    if (old_hash !== result.rows[0].password_hash) {
+    const isCurrentPasswordValid = await comparePasswords(old_password, result.rows[0].password_hash);
+    if (!isCurrentPasswordValid) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    const new_hash = hashPassword1(new_password);
+    const passwordValidation = validatePasswordStrength(new_password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: 'New password does not meet strength requirements', details: passwordValidation.errors });
+    }
+
+    const new_hash = await hashPassword(new_password);
     await student_db.query('UPDATE students SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE student_id = ?', [new_hash, id]);
     
     res.json({ message: 'Password changed successfully' });
