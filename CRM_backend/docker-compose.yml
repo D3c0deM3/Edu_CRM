@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: crm_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: crm_root_password
+      MYSQL_DATABASE: crm_db
+      MYSQL_USER: crm_user
+      MYSQL_PASSWORD: crm_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - crm_network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:latest
+    container_name: crm_adminer
+    ports:
+      - "5050:8080"
+    networks:
+      - crm_network
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
+
+networks:
+  crm_network:
+    driver: bridge

@@ -1,0 +1,103 @@
+-- -- Table for saving tests with support for multiple types (multiple choice, form filling, etc.)
+-- -- The test_data column stores JSON structure that varies based on test_type
+
+-- CREATE TABLE tests (
+--     test_id INT PRIMARY KEY AUTO_INCREMENT,
+--     subject_id INT NOT NULL,
+--     test_name VARCHAR(255) NOT NULL,
+--     test_type ENUM('multiple_choice', 'form_filling', 'essay', 'short_answer', 'true_false', 'matching') NOT NULL,
+--     description TEXT,
+--     total_marks INT NOT NULL DEFAULT 0,
+--     passing_marks INT NOT NULL DEFAULT 0,
+--     duration_minutes INT,
+--     test_data LONGTEXT NOT NULL COMMENT 'JSON structure containing questions based on test_type',
+--     created_by INT NOT NULL,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+--     is_active BOOLEAN DEFAULT TRUE,
+    
+--     FOREIGN KEY (subject_id) REFERENCES subjects(subject_id) ON DELETE CASCADE,
+--     FOREIGN KEY (created_by) REFERENCES superuser(superuser_id) ON DELETE RESTRICT,
+--     INDEX idx_subject (subject_id),
+--     INDEX idx_test_type (test_type),
+--     INDEX idx_created_at (created_at)
+-- );
+
+-- -- JSON Structure Examples for test_data:
+-- -- Multiple Choice:
+-- -- {
+-- --   "questions": [
+-- --     {
+-- --       "question_id": 1,
+-- --       "question_text": "What is 2+2?",
+-- --       "marks": 1,
+-- --       "options": ["3", "4", "5", "6"],
+-- --       "correct_answer": 1
+-- --     }
+-- --   ]
+-- -- }
+
+-- -- Form Filling:
+-- -- {
+-- --   "questions": [
+-- --     {
+-- --       "question_id": 1,
+-- --       "question_text": "Fill in the blank: The capital of France is ___",
+-- --       "marks": 1,
+-- --       "field_type": "text",
+-- --       "correct_answers": ["Paris", "paris"]
+-- --     }
+-- --   ]
+-- -- }
+
+-- -- Essay:
+-- -- {
+-- --   "questions": [
+-- --     {
+-- --       "question_id": 1,
+-- --       "question_text": "Explain the concept of photosynthesis",
+-- --       "marks": 5,
+-- --       "field_type": "long_text"
+-- --     }
+-- --   ]
+-- -- }
+
+-- -- Table for storing student test submissions and answers
+-- CREATE TABLE test_submissions (
+--     submission_id INT PRIMARY KEY AUTO_INCREMENT,
+--     test_id INT NOT NULL,
+--     student_id INT NOT NULL,
+--     submission_data LONGTEXT NOT NULL COMMENT 'JSON structure containing student answers',
+--     score INT,
+--     obtained_marks DECIMAL(10, 2),
+--     status ENUM('in_progress', 'submitted', 'graded') DEFAULT 'in_progress',
+--     submitted_at TIMESTAMP,
+--     graded_at TIMESTAMP,
+--     graded_by INT,
+--     feedback TEXT,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+--     FOREIGN KEY (test_id) REFERENCES tests(test_id) ON DELETE CASCADE,
+--     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+--     FOREIGN KEY (graded_by) REFERENCES superuser(superuser_id) ON DELETE SET NULL,
+--     INDEX idx_test (test_id),
+--     INDEX idx_student (student_id),
+--     INDEX idx_status (status),
+--     INDEX idx_submitted_at (submitted_at)
+-- );
+
+-- -- JSON Structure Example for test_submissions submission_data:
+-- -- {
+-- --   "answers": [
+-- --     {
+-- --       "question_id": 1,
+-- --       "student_answer": 1,
+-- --       "is_correct": true,
+-- --       "marks_obtained": 1
+-- --     }
+-- --   ],
+-- --   "start_time": "2025-01-18T10:00:00",
+-- --   "end_time": "2025-01-18T10:30:00",
+-- --   "time_taken_seconds": 1800
+-- -- }
