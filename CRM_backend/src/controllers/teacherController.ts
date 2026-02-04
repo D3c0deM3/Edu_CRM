@@ -30,7 +30,20 @@ export const createTeacher = async (req: any, res: any) => {
     const { center_id, employee_id, first_name, last_name, email, phone, date_of_birth, gender, qualification, specialization, status, roles } = req.body;
     const result = await pool.query(
       'INSERT INTO teachers (center_id, employee_id, first_name, last_name, email, phone, date_of_birth, gender, qualification, specialization, status, roles) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [center_id, employee_id, first_name, last_name, email, phone, date_of_birth, gender, qualification, specialization, status || 'Active', JSON.stringify(roles || [])]
+      [
+        center_id || null,
+        employee_id || null,
+        first_name || null,
+        last_name || null,
+        email || null,
+        phone || null,
+        date_of_birth || null,
+        gender || null,
+        qualification || null,
+        specialization || null,
+        status || 'Active',
+        JSON.stringify(roles || [])
+      ]
     );
     const created = await pool.query('SELECT * FROM teachers WHERE teacher_id = ?', [result.insertId]);
     res.status(201).json(created.rows[0]);

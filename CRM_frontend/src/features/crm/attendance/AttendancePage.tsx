@@ -3,7 +3,7 @@ import { MdEdit, MdDelete, MdAdd, MdClose, MdArrowBack, MdFolder, MdSearch, MdFi
 import { useCRUD } from '../hooks/useCRUD';
 import { attendanceAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
-import { fetchStudents, fetchTeachers, fetchClasses, attendanceStatusOptions } from '../../../utils/dropdownOptions';
+import { mapStudentsToOptions, mapTeachersToOptions, mapClassesToOptions, attendanceStatusOptions } from '../../../utils/dropdownOptions';
 import '../dashboard/Dashboard.css';
 import '../students/CRUDStyles.css';
 import '../payments/PaymentsPage.css';
@@ -65,7 +65,6 @@ const AttendancePage = () => {
   const [studentOptions, setStudentOptions] = useState<any[]>([]);
   const [teacherOptions, setTeacherOptions] = useState<any[]>([]);
   const [classOptions, setClassOptions] = useState<any[]>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
 
   // Search and Filter
@@ -77,8 +76,19 @@ const AttendancePage = () => {
   useEffect(() => {
     actions.fetchAll();
     loadAllData();
-    loadDropdownOptions();
   }, []);
+
+  useEffect(() => {
+    setStudentOptions(mapStudentsToOptions(students));
+  }, [students]);
+
+  useEffect(() => {
+    setTeacherOptions(mapTeachersToOptions(teachers));
+  }, [teachers]);
+
+  useEffect(() => {
+    setClassOptions(mapClassesToOptions(classes));
+  }, [classes]);
 
   const loadAllData = async () => {
     setLoadingData(true);
@@ -95,24 +105,6 @@ const AttendancePage = () => {
       console.error('Error loading data:', error);
     } finally {
       setLoadingData(false);
-    }
-  };
-
-  const loadDropdownOptions = async () => {
-    setIsLoadingOptions(true);
-    try {
-      const [students, teachers, classes] = await Promise.all([
-        fetchStudents(),
-        fetchTeachers(),
-        fetchClasses(),
-      ]);
-      setStudentOptions(students);
-      setTeacherOptions(teachers);
-      setClassOptions(classes);
-    } catch (error) {
-      console.error('Error loading dropdown options:', error);
-    } finally {
-      setIsLoadingOptions(false);
     }
   };
 
@@ -658,7 +650,7 @@ const AttendancePage = () => {
                     setFormData({ ...formData, student_id: Number(e.target.value) })
                   }
                   options={studentOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingData && studentOptions.length === 0}
                   required
                   placeholder="Select a student"
                 />
@@ -670,7 +662,7 @@ const AttendancePage = () => {
                     setFormData({ ...formData, teacher_id: Number(e.target.value) })
                   }
                   options={teacherOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingData && teacherOptions.length === 0}
                   required
                   placeholder="Select a teacher"
                 />
@@ -684,7 +676,7 @@ const AttendancePage = () => {
                     setFormData({ ...formData, class_id: Number(e.target.value) })
                   }
                   options={classOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingData && classOptions.length === 0}
                   required
                   placeholder="Select a class"
                 />

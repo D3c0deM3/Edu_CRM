@@ -39,7 +39,18 @@ export const createClass = async (req: any, res: any) => {
     
     const result = await class_db.query(
       'INSERT INTO classes (center_id, class_name, class_code, level, section, capacity, teacher_id, room_number, payment_amount, payment_frequency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [center_id, class_name, class_code, level, section, capacity, validatedTeacherId, room_number, payment_amount, payment_frequency || 'Monthly']
+      [
+        center_id || null,
+        class_name || null,
+        class_code || null,
+        level || null,
+        section || null,
+        capacity || null,
+        validatedTeacherId,
+        room_number || null,
+        payment_amount || null,
+        payment_frequency || 'Monthly'
+      ]
     );
     const created = await class_db.query('SELECT * FROM classes WHERE class_id = ?', [result.insertId]);
     res.status(201).json(created.rows[0]);

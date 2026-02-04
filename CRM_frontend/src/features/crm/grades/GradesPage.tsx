@@ -3,7 +3,7 @@ import { MdEdit, MdDelete, MdAdd, MdClose, MdArrowBack, MdFolder, MdSearch, MdFi
 import { useCRUD } from '../hooks/useCRUD';
 import { gradeAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
-import { fetchStudents, fetchTeachers, fetchSubjects, fetchClasses, termOptions } from '../../../utils/dropdownOptions';
+import { fetchSubjects, mapStudentsToOptions, mapTeachersToOptions, mapClassesToOptions, termOptions } from '../../../utils/dropdownOptions';
 import '../dashboard/Dashboard.css';
 import '../students/CRUDStyles.css';
 import '../payments/PaymentsPage.css';
@@ -84,8 +84,19 @@ const GradesPage = () => {
   useEffect(() => {
     actions.fetchAll();
     loadAllData();
-    loadDropdownOptions();
   }, []);
+
+  useEffect(() => {
+    setStudentOptions(mapStudentsToOptions(students));
+  }, [students]);
+
+  useEffect(() => {
+    setTeacherOptions(mapTeachersToOptions(teachers));
+  }, [teachers]);
+
+  useEffect(() => {
+    setClassOptions(mapClassesToOptions(classes));
+  }, [classes]);
 
   const loadAllData = async () => {
     setLoadingData(true);
@@ -105,19 +116,14 @@ const GradesPage = () => {
     }
   };
 
-  const loadDropdownOptions = async () => {
+  const ensureSubjectOptions = async () => {
+    if (subjectOptions.length > 0) {
+      return;
+    }
     setIsLoadingOptions(true);
     try {
-      const [students, teachers, subjects, classes] = await Promise.all([
-        fetchStudents(),
-        fetchTeachers(),
-        fetchSubjects(),
-        fetchClasses(),
-      ]);
-      setStudentOptions(students);
-      setTeacherOptions(teachers);
+      const subjects = await fetchSubjects();
       setSubjectOptions(subjects);
-      setClassOptions(classes);
     } catch (error) {
       console.error('Error loading dropdown options:', error);
     } finally {
@@ -126,6 +132,9 @@ const GradesPage = () => {
   };
 
   const handleOpenModal = (grade?: Grade) => {
+    if (subjectOptions.length === 0) {
+      void ensureSubjectOptions();
+    }
     if (grade) {
       setEditingId(grade.grade_id || grade.id || null);
       setFormData(grade);
@@ -708,7 +717,7 @@ const GradesPage = () => {
                     setFormData({ ...formData, student_id: Number(e.target.value) })
                   }
                   options={studentOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingData && studentOptions.length === 0}
                   required
                   placeholder="Select a student"
                 />
@@ -720,7 +729,7 @@ const GradesPage = () => {
                     setFormData({ ...formData, teacher_id: Number(e.target.value) })
                   }
                   options={teacherOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingData && teacherOptions.length === 0}
                   required
                   placeholder="Select a teacher"
                 />
@@ -746,7 +755,7 @@ const GradesPage = () => {
                     setFormData({ ...formData, class_id: Number(e.target.value) })
                   }
                   options={classOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingData && classOptions.length === 0}
                   required
                   placeholder="Select a class"
                 />

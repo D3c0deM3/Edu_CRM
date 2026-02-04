@@ -74,10 +74,12 @@ const TeachersPage = () => {
 
   useEffect(() => {
     actions.fetchAll();
-    loadDropdownOptions();
   }, []);
 
-  const loadDropdownOptions = async () => {
+  const ensureCenterOptions = async () => {
+    if (centerOptions.length > 0) {
+      return;
+    }
     setIsLoadingOptions(true);
     try {
       const centers = await fetchCenters();
@@ -90,6 +92,9 @@ const TeachersPage = () => {
   };
 
   const handleOpenModal = (teacher?: Teacher) => {
+    if (centerOptions.length === 0) {
+      void ensureCenterOptions();
+    }
     if (teacher) {
       setEditingId(teacher.teacher_id || teacher.id || null);
       setFormData(teacher);
@@ -502,6 +507,7 @@ const TeachersPage = () => {
                     value={formData.center_id || ''}
                     label="Center"
                     onChange={(e) => setFormData({ ...formData, center_id: Number(e.target.value) })}
+                    disabled={isLoadingOptions}
                   >
                     {centerOptions.map((opt) => (
                       <MenuItem key={opt.id} value={opt.id}>

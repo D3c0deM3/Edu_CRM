@@ -32,10 +32,12 @@ const SubjectsPage = () => {
 
   useEffect(() => {
     actions.fetchAll();
-    loadDropdownOptions();
   }, []);
 
-  const loadDropdownOptions = async () => {
+  const ensureDropdownOptions = async () => {
+    if (classOptions.length > 0 && teacherOptions.length > 0) {
+      return;
+    }
     setIsLoadingOptions(true);
     try {
       const [classes, teachers] = await Promise.all([
@@ -52,6 +54,9 @@ const SubjectsPage = () => {
   };
 
   const handleOpenModal = (subject?: Subject) => {
+    if (classOptions.length === 0 || teacherOptions.length === 0) {
+      void ensureDropdownOptions();
+    }
     if (subject) {
       setEditingId(subject.subject_id || subject.id || null);
       setFormData(subject);

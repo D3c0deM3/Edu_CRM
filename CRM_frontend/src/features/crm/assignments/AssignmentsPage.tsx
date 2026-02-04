@@ -3,7 +3,7 @@ import { MdEdit, MdDelete, MdAdd, MdClose, MdArrowBack, MdFolder, MdSearch, MdFi
 import { useCRUD } from '../hooks/useCRUD';
 import { assignmentAPI, classAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
-import { fetchClasses, assignmentStatusOptions } from '../../../utils/dropdownOptions';
+import { mapClassesToOptions, assignmentStatusOptions } from '../../../utils/dropdownOptions';
 import '../dashboard/Dashboard.css';
 import '../students/CRUDStyles.css';
 import '../payments/PaymentsPage.css';
@@ -44,7 +44,6 @@ const AssignmentsPage = () => {
     status: 'Pending',
   });
   const [classOptions, setClassOptions] = useState<any[]>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
 
   // Search and Filter
@@ -55,8 +54,11 @@ const AssignmentsPage = () => {
   useEffect(() => {
     actions.fetchAll();
     loadAllData();
-    loadDropdownOptions();
   }, []);
+
+  useEffect(() => {
+    setClassOptions(mapClassesToOptions(classes));
+  }, [classes]);
 
   const loadAllData = async () => {
     setLoadingData(true);
@@ -67,18 +69,6 @@ const AssignmentsPage = () => {
       console.error('Error loading data:', error);
     } finally {
       setLoadingData(false);
-    }
-  };
-
-  const loadDropdownOptions = async () => {
-    setIsLoadingOptions(true);
-    try {
-      const classes = await fetchClasses();
-      setClassOptions(classes);
-    } catch (error) {
-      console.error('Error loading dropdown options:', error);
-    } finally {
-      setIsLoadingOptions(false);
     }
   };
 
@@ -485,7 +475,7 @@ const AssignmentsPage = () => {
                     setFormData({ ...formData, class_id: e.target.value ? Number(e.target.value) : undefined })
                   }
                   options={classOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingData && classOptions.length === 0}
                   placeholder="Select a class or leave empty"
                 />
                 <div className="form-group">

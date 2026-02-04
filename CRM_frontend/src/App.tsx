@@ -1,12 +1,10 @@
 import './App.css';
-import { useEffect, lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { store } from './store';
-import { useAppDispatch } from './features/crm/hooks';
-import { initializeAuth } from './slices/authSlice';
 import Layout from './components/layout/Layout';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { LoginPage } from './pages/auth/LoginPage';
@@ -46,12 +44,6 @@ const UnauthorizedPage = () => (
 );
 
 function AppContent() {
-  const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    dispatch(initializeAuth());
-  }, [dispatch]);
-
   return (
     <Routes>
       {/* Auth Routes */}

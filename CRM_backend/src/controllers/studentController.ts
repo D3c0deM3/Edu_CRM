@@ -30,7 +30,21 @@ export const createStudent = async (req: any, res: any) => {
     const { center_id, enrollment_number, first_name, last_name, email, phone, date_of_birth, parent_name, parent_phone, gender, status, teacher_id, class_id } = req.body;
     const result = await student_db.query(
       'INSERT INTO students (center_id, enrollment_number, first_name, last_name, email, phone, date_of_birth, parent_name, parent_phone, gender, status, teacher_id, class_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [center_id, enrollment_number, first_name, last_name, email, phone, date_of_birth, parent_name, parent_phone, gender, status || 'Active', teacher_id, class_id]
+      [
+        center_id || null,
+        enrollment_number || null,
+        first_name || null,
+        last_name || null,
+        email || null,
+        phone || null,
+        date_of_birth || null,
+        parent_name || null,
+        parent_phone || null,
+        gender || null,
+        status || 'Active',
+        teacher_id || null,
+        class_id || null
+      ]
     );
     const created = await student_db.query('SELECT * FROM students WHERE student_id = ?', [result.insertId]);
     res.status(201).json(created.rows[0]);

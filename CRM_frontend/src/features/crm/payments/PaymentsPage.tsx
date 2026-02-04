@@ -3,7 +3,7 @@ import { MdEdit, MdDelete, MdClose, MdArrowBack, MdFolder, MdSearch, MdFilterLis
 import { useCRUD } from '../hooks/useCRUD';
 import { paymentAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
-import { fetchStudents, fetchCenters, paymentMethodOptions, paymentStatusOptions, paymentTypeOptions, currencyOptions } from '../../../utils/dropdownOptions';
+import { fetchCenters, mapStudentsToOptions, paymentMethodOptions, paymentStatusOptions, paymentTypeOptions, currencyOptions } from '../../../utils/dropdownOptions';
 import './PaymentsPage.css';
 import { Plus, DollarSign, X, CreditCard, Users } from 'lucide-react';
 
@@ -82,8 +82,11 @@ const PaymentsPage = () => {
   useEffect(() => {
     actions.fetchAll();
     loadAllData();
-    loadDropdownOptions();
   }, []);
+
+  useEffect(() => {
+    setStudentOptions(mapStudentsToOptions(students));
+  }, [students]);
 
   const loadAllData = async () => {
     setLoadingData(true);
@@ -103,14 +106,13 @@ const PaymentsPage = () => {
     }
   };
 
-  const loadDropdownOptions = async () => {
+  const ensureCenterOptions = async () => {
+    if (centerOptions.length > 0) {
+      return;
+    }
     setIsLoadingOptions(true);
     try {
-      const [studentOpts, centers] = await Promise.all([
-        fetchStudents(),
-        fetchCenters(),
-      ]);
-      setStudentOptions(studentOpts);
+      const centers = await fetchCenters();
       setCenterOptions(centers);
     } catch (error) {
       console.error('Error loading dropdown options:', error);
@@ -231,6 +233,9 @@ const PaymentsPage = () => {
   };
 
   const handleOpenModal = (payment?: Payment) => {
+    if (centerOptions.length === 0) {
+      void ensureCenterOptions();
+    }
     if (payment) {
       setEditingId(payment.payment_id || payment.id || null);
       setFormData(payment);
@@ -671,7 +676,7 @@ const PaymentsPage = () => {
                   value={formData.student_id || ''}
                   onChange={(e) => setFormData({ ...formData, student_id: Number(e.target.value) })}
                   options={studentOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingData && studentOptions.length === 0}
                   required
                   placeholder="Select a student"
                 />

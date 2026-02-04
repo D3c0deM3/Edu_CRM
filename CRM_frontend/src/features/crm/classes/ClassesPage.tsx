@@ -78,10 +78,12 @@ const ClassesPage = () => {
 
   useEffect(() => {
     actions.fetchAll();
-    loadDropdownOptions();
   }, []);
 
-  const loadDropdownOptions = async () => {
+  const ensureDropdownOptions = async () => {
+    if (centerOptions.length > 0 && teacherOptions.length > 0) {
+      return;
+    }
     setIsLoadingOptions(true);
     try {
       const [centers, teachers] = await Promise.all([
@@ -98,6 +100,9 @@ const ClassesPage = () => {
   };
 
   const handleOpenModal = (cls?: Class) => {
+    if (centerOptions.length === 0 || teacherOptions.length === 0) {
+      void ensureDropdownOptions();
+    }
     if (cls) {
       setEditingId(cls.class_id || cls.id || null);
       setFormData(cls);
@@ -466,6 +471,7 @@ const ClassesPage = () => {
                 value={formData.center_id || ''}
                 label="Center"
                 onChange={(e) => setFormData({ ...formData, center_id: Number(e.target.value) })}
+                disabled={isLoadingOptions}
               >
                 {centerOptions.map((opt) => (
                   <MenuItem key={opt.id || opt.value} value={opt.value}>
@@ -486,6 +492,7 @@ const ClassesPage = () => {
                     teacher_id: e.target.value ? Number(e.target.value) : undefined,
                   })
                 }
+                disabled={isLoadingOptions}
               >
                 <MenuItem value="">None</MenuItem>
                 {teacherOptions.map((opt) => (

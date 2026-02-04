@@ -7,18 +7,67 @@ export interface DropdownOption {
   value: any;
 }
 
+const getId = (item: any) => item?.student_id || item?.teacher_id || item?.class_id || item?.center_id || item?.subject_id || item?.payment_id || item?.id;
+
+export const mapTeachersToOptions = (teacherList: any[]): DropdownOption[] => {
+  return teacherList.map((teacher: any) => ({
+    id: teacher.teacher_id || teacher.id,
+    label: `${teacher.first_name || ''} ${teacher.last_name || ''}`.trim() || `Teacher ${getId(teacher)}`,
+    value: teacher.teacher_id || teacher.id,
+  }));
+};
+
+export const mapStudentsToOptions = (studentList: any[]): DropdownOption[] => {
+  return studentList.map((student: any) => {
+    const baseName = `${student.first_name || ''} ${student.last_name || ''}`.trim();
+    const enrollment = student.enrollment_number ? ` (${student.enrollment_number})` : '';
+    return {
+      id: student.student_id || student.id,
+      label: `${baseName || `Student ${getId(student)}`}${enrollment}`,
+      value: student.student_id || student.id,
+    };
+  });
+};
+
+export const mapClassesToOptions = (classList: any[]): DropdownOption[] => {
+  return classList.map((cls: any) => ({
+    id: cls.class_id || cls.id,
+    label: `${cls.class_name} - ${cls.level}${cls.section ? ' ' + cls.section : ''}`,
+    value: cls.class_id || cls.id,
+  }));
+};
+
+export const mapCentersToOptions = (centerList: any[]): DropdownOption[] => {
+  return centerList.map((center: any) => ({
+    id: center.center_id || center.id,
+    label: center.center_name || `${center.city} - ${center.id}`,
+    value: center.center_id || center.id,
+  }));
+};
+
+export const mapSubjectsToOptions = (subjectList: any[]): DropdownOption[] => {
+  return subjectList.map((subject: any) => ({
+    id: subject.subject_id || subject.id,
+    label: subject.subject_name,
+    value: subject.subject_id || subject.id,
+  }));
+};
+
+export const mapPaymentsToOptions = (paymentList: any[]): DropdownOption[] => {
+  return paymentList.map((payment: any) => ({
+    id: payment.payment_id || payment.id,
+    label: `Receipt #${payment.receipt_number} - ${payment.amount}`,
+    value: payment.payment_id || payment.id,
+  }));
+};
+
 // Fetch Teachers
 export const fetchTeachers = async (): Promise<DropdownOption[]> => {
   try {
     const response = await teacherAPI.getAll();
     const data = response.data || response;
     const teacherList = Array.isArray(data) ? data : [];
-    console.log('Teachers fetched:', teacherList);
-    return teacherList.map((teacher: any) => ({
-      id: teacher.teacher_id || teacher.id,
-      label: `${teacher.first_name} ${teacher.last_name}`,
-      value: teacher.teacher_id || teacher.id,
-    }));
+    return mapTeachersToOptions(teacherList);
   } catch (error) {
     console.error('Error fetching teachers:', error);
     return [];
@@ -31,12 +80,7 @@ export const fetchStudents = async (): Promise<DropdownOption[]> => {
     const response = await studentAPI.getAll();
     const data = response.data || response;
     const studentList = Array.isArray(data) ? data : [];
-    console.log('Students fetched:', studentList);
-    return studentList.map((student: any) => ({
-      id: student.student_id || student.id,
-      label: `${student.first_name} ${student.last_name} (${student.enrollment_number})`,
-      value: student.student_id || student.id,
-    }));
+    return mapStudentsToOptions(studentList);
   } catch (error) {
     console.error('Error fetching students:', error);
     return [];
@@ -49,12 +93,7 @@ export const fetchClasses = async (): Promise<DropdownOption[]> => {
     const response = await classAPI.getAll();
     const data = response.data || response;
     const classList = Array.isArray(data) ? data : [];
-    console.log('Classes fetched:', classList);
-    return classList.map((cls: any) => ({
-      id: cls.class_id || cls.id,
-      label: `${cls.class_name} - ${cls.level}${cls.section ? ' ' + cls.section : ''}`,
-      value: cls.class_id || cls.id,
-    }));
+    return mapClassesToOptions(classList);
   } catch (error) {
     console.error('Error fetching classes:', error);
     return [];
@@ -67,12 +106,7 @@ export const fetchCenters = async (): Promise<DropdownOption[]> => {
     const response = await centerAPI.getAll();
     const data = response.data || response;
     const centerList = Array.isArray(data) ? data : [];
-    console.log('Centers fetched:', centerList);
-    return centerList.map((center: any) => ({
-      id: center.center_id || center.id,
-      label: center.center_name || `${center.city} - ${center.id}`,
-      value: center.center_id || center.id,
-    }));
+    return mapCentersToOptions(centerList);
   } catch (error) {
     console.error('Error fetching centers:', error);
     return [];
@@ -85,12 +119,7 @@ export const fetchSubjects = async (): Promise<DropdownOption[]> => {
     const response = await subjectAPI.getAll();
     const data = response.data || response;
     const subjectList = Array.isArray(data) ? data : [];
-    console.log('Subjects fetched:', subjectList);
-    return subjectList.map((subject: any) => ({
-      id: subject.subject_id || subject.id,
-      label: subject.subject_name,
-      value: subject.subject_id || subject.id,
-    }));
+    return mapSubjectsToOptions(subjectList);
   } catch (error) {
     console.error('Error fetching subjects:', error);
     return [];
@@ -103,12 +132,7 @@ export const fetchPayments = async (): Promise<DropdownOption[]> => {
     const response = await paymentAPI.getAll();
     const data = response.data || response;
     const paymentList = Array.isArray(data) ? data : [];
-    console.log('Payments fetched:', paymentList);
-    return paymentList.map((payment: any) => ({
-      id: payment.payment_id || payment.id,
-      label: `Receipt #${payment.receipt_number} - ${payment.amount}`,
-      value: payment.payment_id || payment.id,
-    }));
+    return mapPaymentsToOptions(paymentList);
   } catch (error) {
     console.error('Error fetching payments:', error);
     return [];

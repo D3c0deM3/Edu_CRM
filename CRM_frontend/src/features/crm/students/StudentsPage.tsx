@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCRUD } from '../hooks/useCRUD';
 import { studentAPI, classAPI } from '../../../shared/api/api';
 import { SelectField } from './components/SelectField';
-import { fetchTeachers, fetchCenters, fetchClasses, genderOptions, statusOptions } from '../../../utils/dropdownOptions';
+import { fetchTeachers, fetchCenters, genderOptions, statusOptions, mapClassesToOptions } from '../../../utils/dropdownOptions';
 import './CRUDStyles.css';
 import { Plus, Users, X } from 'lucide-react';
 
@@ -62,8 +62,11 @@ const StudentsPage = () => {
   useEffect(() => {
     actions.fetchAll();
     loadClasses();
-    loadDropdownOptions();
   }, []);
+
+  useEffect(() => {
+    setClassOptions(mapClassesToOptions(classes));
+  }, [classes]);
 
   const loadClasses = async () => {
     setLoadingClasses(true);
@@ -79,16 +82,17 @@ const StudentsPage = () => {
   };
 
   const loadDropdownOptions = async () => {
+    if (teacherOptions.length > 0 && centerOptions.length > 0) {
+      return;
+    }
     setIsLoadingOptions(true);
     try {
-      const [teachers, centers, classes] = await Promise.all([
+      const [teachers, centers] = await Promise.all([
         fetchTeachers(),
         fetchCenters(),
-        fetchClasses(),
       ]);
       setTeacherOptions(teachers);
       setCenterOptions(centers);
-      setClassOptions(classes);
     } catch (error) {
       console.error('Error loading dropdown options:', error);
     } finally {
@@ -97,6 +101,9 @@ const StudentsPage = () => {
   };
 
   const handleOpenModal = (student?: Student) => {
+    if (teacherOptions.length === 0 || centerOptions.length === 0) {
+      void loadDropdownOptions();
+    }
     if (student) {
       setEditingId(student.student_id || student.id || null);
       setFormData(student);
@@ -782,7 +789,7 @@ const StudentsPage = () => {
                     setFormData({ ...formData, center_id: Number(e.target.value) })
                   }
                   options={centerOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={isLoadingOptions && centerOptions.length === 0}
                   required
                   placeholder="Select a center"
                 />
@@ -794,7 +801,7 @@ const StudentsPage = () => {
                     setFormData({ ...formData, teacher_id: e.target.value ? Number(e.target.value) : undefined })
                   }
                   options={teacherOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={isLoadingOptions && teacherOptions.length === 0}
                   placeholder="Select a teacher (optional)"
                 />
               </div>
@@ -808,7 +815,7 @@ const StudentsPage = () => {
                     setFormData({ ...formData, class_id: e.target.value ? Number(e.target.value) : undefined })
                   }
                   options={classOptions}
-                  isLoading={isLoadingOptions}
+                  isLoading={loadingClasses && classOptions.length === 0}
                   placeholder="Select a class (optional)"
                 />
               </div>
