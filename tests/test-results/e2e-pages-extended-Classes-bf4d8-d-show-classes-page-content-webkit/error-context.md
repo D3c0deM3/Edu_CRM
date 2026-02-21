@@ -1,0 +1,68 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - heading "CRM System" [level=6] [ref=e8]
+      - generic [ref=e9]:
+        - generic [ref=e11]: AM
+        - heading "Abduqodirov Muzaffar" [level=6] [ref=e13]
+        - text: SUPERUSER
+      - list [ref=e15]:
+        - listitem [ref=e16]:
+          - button "Dashboard" [ref=e17] [cursor=pointer]:
+            - img [ref=e19]
+            - generic [ref=e22]: Dashboard
+        - listitem [ref=e23]:
+          - button "Students" [ref=e24] [cursor=pointer]:
+            - img [ref=e26]
+            - generic [ref=e29]: Students
+        - listitem [ref=e30]:
+          - button "Teachers" [ref=e31] [cursor=pointer]:
+            - img [ref=e33]
+            - generic [ref=e36]: Teachers
+        - listitem [ref=e37]:
+          - button "Classes" [ref=e38] [cursor=pointer]:
+            - img [ref=e40]
+            - generic [ref=e43]: Classes
+        - listitem [ref=e44]:
+          - button "Tests" [ref=e45] [cursor=pointer]:
+            - img [ref=e47]
+            - generic [ref=e51]: Tests
+        - listitem [ref=e52]:
+          - button "Payments" [ref=e53] [cursor=pointer]:
+            - img [ref=e55]
+            - generic [ref=e58]: Payments
+        - listitem [ref=e59]:
+          - button "Grades" [ref=e60] [cursor=pointer]:
+            - img [ref=e62]
+            - generic [ref=e65]: Grades
+        - listitem [ref=e66]:
+          - button "Attendance" [ref=e67] [cursor=pointer]:
+            - img [ref=e69]
+            - generic [ref=e72]: Attendance
+        - listitem [ref=e73]:
+          - button "Assignments" [ref=e74] [cursor=pointer]:
+            - img [ref=e76]
+            - generic [ref=e79]: Assignments
+        - listitem [ref=e80]:
+          - button "Subjects" [ref=e81] [cursor=pointer]:
+            - img [ref=e83]
+            - generic [ref=e86]: Subjects
+        - listitem [ref=e87]:
+          - button "Debts" [ref=e88] [cursor=pointer]:
+            - img [ref=e90]
+            - generic [ref=e93]: Debts
+        - listitem [ref=e94]:
+          - button "Centers" [ref=e95] [cursor=pointer]:
+            - img [ref=e97]
+            - generic [ref=e100]: Centers
+      - separator [ref=e101]
+      - button "Logout" [ref=e103] [cursor=pointer]:
+        - img [ref=e105]
+        - text: Logout
+    - main [ref=e107]:
+      - paragraph [ref=e110]: Loading...
+  - region "Notifications Alt+T"
+```

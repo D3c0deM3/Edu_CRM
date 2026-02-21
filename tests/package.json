@@ -1,0 +1,29 @@
+{
+  "name": "crm-tests",
+  "version": "1.0.0",
+  "description": "Playwright tests for CRM Education System",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:api": "npx playwright test --project=api",
+    "test:e2e": "npx playwright test --project=chromium",
+    "test:all-browsers": "npx playwright test --project=chromium --project=firefox --project=webkit",
+    "test:headed": "npx playwright test --headed",
+    "test:ui": "npx playwright test --ui",
+    "test:debug": "npx playwright test --debug",
+    "report": "npx playwright show-report",
+    "install-browsers": "npx playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.19.33"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e",
+    "integration",
+    "crm"
+  ],
+  "author": "",
+  "license": "ISC"
+}

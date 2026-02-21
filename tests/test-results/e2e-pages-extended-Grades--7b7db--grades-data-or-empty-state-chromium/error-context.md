@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - img [ref=e9]
+      - heading "CRM System" [level=4] [ref=e11]
+      - heading "Superuser Login" [level=6] [ref=e12]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic:
+          - text: Username
+          - generic: "*"
+        - generic [ref=e15]:
+          - textbox "Username" [ref=e16]:
+            - /placeholder: Enter your username
+          - group:
+            - generic: Username *
+      - generic [ref=e17]:
+        - generic:
+          - text: Password
+          - generic: "*"
+        - generic [ref=e18]:
+          - textbox "Password" [ref=e19]:
+            - /placeholder: Enter your password
+          - group:
+            - generic: Password *
+      - button "Login" [ref=e20] [cursor=pointer]:
+        - img [ref=e22]
+        - text: Login
+    - generic [ref=e24]:
+      - paragraph [ref=e25]: "Other login options:"
+      - generic [ref=e26]:
+        - link "Owner/Manager Login" [ref=e27] [cursor=pointer]:
+          - /url: /login/owner
+        - link "Teacher Login" [ref=e28] [cursor=pointer]:
+          - /url: /login/teacher
+        - link "Student Login" [ref=e29] [cursor=pointer]:
+          - /url: /login/student
+  - region "Notifications Alt+T"
+```
