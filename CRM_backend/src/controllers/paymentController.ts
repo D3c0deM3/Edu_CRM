@@ -2,7 +2,11 @@ const payment_db = require('../../config/dbcon');
 
 exports.getAllPayments = async (req: any, res: any) => {
   try {
-    const result = await payment_db.query('SELECT * FROM payments ORDER BY payment_id DESC');
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const result = await payment_db.query('SELECT * FROM payments WHERE center_id = $1 ORDER BY payment_id DESC', [center_id]);
     res.json(result.rows);
   } catch (error: any) {
     console.error('Database error:', error);

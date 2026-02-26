@@ -1,6 +1,7 @@
 const express_center = require('express');
 const router_center = express_center.Router();
 const centerController = require('../controllers/centerController');
+const { requireRole } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -62,7 +63,7 @@ router_center.get('/:id', centerController.getCenterById);
  *       400:
  *         description: Invalid input
  */
-router_center.post('/', centerController.createCenter);
+router_center.post('/', requireRole('superuser'), centerController.createCenter);
 
 /**
  * @swagger
@@ -88,7 +89,7 @@ router_center.post('/', centerController.createCenter);
  *       404:
  *         description: Center not found
  */
-router_center.put('/:id', centerController.updateCenter);
+router_center.put('/:id', requireRole('superuser'), centerController.updateCenter);
 
 /**
  * @swagger
@@ -108,6 +109,8 @@ router_center.put('/:id', centerController.updateCenter);
  *       404:
  *         description: Center not found
  */
-router_center.delete('/:id', centerController.deleteCenter);
+router_center.delete('/:id', requireRole('superuser'), centerController.deleteCenter);
 
 module.exports = router_center;
+
+export {};

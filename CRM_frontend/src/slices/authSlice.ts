@@ -2,9 +2,17 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, AuthUser } from '../types';
 
+// Restore session synchronously so ProtectedRoute never sees a false unauthenticated
+// state on the first render after a page refresh.
+const _storedToken = localStorage.getItem('token');
+const _storedUser = localStorage.getItem('user');
+const _restoredUser: AuthUser | null = (_storedToken && _storedUser)
+  ? (() => { try { return JSON.parse(_storedUser); } catch { return null; } })()
+  : null;
+
 const initialState: AuthState = {
-  user: null,
-  isAuthenticated: false,
+  user: _restoredUser,
+  isAuthenticated: !!_restoredUser,
   loading: false,
   error: null,
 };

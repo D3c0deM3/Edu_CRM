@@ -8,6 +8,7 @@ import { AttendanceTab, PaymentsTab, AssignmentsTab, IndividualTasksTab, GradesT
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAppSelector } from '../hooks';
 
 interface Class {
   class_id?: number;
@@ -73,6 +74,8 @@ interface Grade {
 const StudentDetailPage = () => {
   const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
+  const { user } = useAppSelector((state) => state.auth);
+  const isSuperuser = user?.userType === 'superuser';
   const [student, setStudent] = useState<Student | null>(null);
   const [classData, setClassData] = useState<Class | null>(null);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
@@ -108,7 +111,7 @@ const StudentDetailPage = () => {
 
       const [attendanceRes, paymentRes, assignmentRes, gradeRes] = await Promise.all([
         attendanceAPI.getAll(),
-        paymentAPI.getAll(),
+        isSuperuser ? paymentAPI.getAll() : Promise.resolve({ data: [] }),
         assignmentAPI.getAll(),
         gradeAPI.getAll(),
       ]);

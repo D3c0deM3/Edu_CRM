@@ -19,7 +19,11 @@ export const ProtectedRoute = ({
   const { canAccess } = useRBAC();
 
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login/superuser" replace />;
+    // Redirect to the correct login page based on any stored user type
+    const storedUser = localStorage.getItem('user');
+    const userType = storedUser ? JSON.parse(storedUser)?.userType : null;
+    const loginPath = userType === 'student' ? '/login/student' : userType === 'teacher' ? '/login/teacher' : '/login/superuser';
+    return <Navigate to={loginPath} replace />;
   }
 
   // Check if user type is in allowed list

@@ -6,22 +6,23 @@ const test_db = require('../../config/dbcon');
 
 exports.getAllTests = async (req: any, res: any) => {
   try {
-    const { center_id, test_type, is_active, subject_id } = req.query;
+    // Always enforce center_id from the authenticated user's token
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const { test_type, is_active, subject_id } = req.query;
     let query = `
       SELECT t.*, s.subject_name, 
              (SELECT COUNT(*) FROM test_questions WHERE test_id = t.test_id) as question_count,
              (SELECT COUNT(*) FROM test_submissions WHERE test_id = t.test_id) as submission_count
       FROM tests t
       LEFT JOIN subjects s ON t.subject_id = s.subject_id
-      WHERE 1=1
+      WHERE t.center_id = $1
     `;
-    const params: any[] = [];
-    let paramCount = 1;
+    const params: any[] = [center_id];
+    let paramCount = 2;
 
-    if (center_id) {
-      query += ` AND t.center_id = $${paramCount++}`;
-      params.push(center_id);
-    }
     if (test_type) {
       query += ` AND t.test_type = $${paramCount++}`;
       params.push(test_type);

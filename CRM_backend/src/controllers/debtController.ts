@@ -2,9 +2,13 @@ const debt_db = require('../../config/dbcon');
 
 exports.getAllDebts = async (req: any, res: any) => {
   try {
-    const result = await debt_db.query('SELECT * FROM debts ORDER BY debt_id DESC');
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const result = await debt_db.query('SELECT * FROM debts WHERE center_id = $1 ORDER BY debt_id DESC', [center_id]);
     res.json(result.rows);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Database error:', error);
     res.status(500).json({ error: 'Failed to fetch debts' });
   }
@@ -95,18 +99,16 @@ exports.deleteDebt = async (req: any, res: any) => {
 
 exports.analyzeUnpaidMonths = async (req: any, res: any) => {
   try {
-    const { center_id, start_date, end_date } = req.query;
-    
-    // Get all students
-    let studentQuery = 'SELECT student_id, first_name, last_name, enrollment_number, center_id FROM students WHERE status = $1';
-    const studentParams: any[] = ['Active'];
-    
-    if (center_id) {
-      studentQuery += ' AND center_id = $2';
-      studentParams.push(center_id);
+    // Always enforce center_id from the authenticated user's token
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
     }
+    const { start_date, end_date } = req.query;
     
-    const studentsResult = await debt_db.query(studentQuery, studentParams);
+    // Get all active students for this center
+    const studentQuery = 'SELECT student_id, first_name, last_name, enrollment_number, center_id FROM students WHERE status = $1 AND center_id = $2';
+    const studentsResult = await debt_db.query(studentQuery, ['Active', center_id]);
     const students = studentsResult.rows;
 
     // Determine date range for analysis (default: last 12 months)
@@ -216,7 +218,12 @@ exports.analyzeUnpaidMonths = async (req: any, res: any) => {
 // Generate debts for unpaid months
 exports.generateDebtsFromAnalysis = async (req: any, res: any) => {
   try {
-    const { student_ids, monthly_fee, center_id, remarks } = req.body;
+    const { student_ids, monthly_fee, remarks } = req.body;
+    // Always use center_id from the authenticated user's token
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
     
     if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
       return res.status(400).json({ error: 'student_ids array is required' });
@@ -230,32 +237,27 @@ exports.generateDebtsFromAnalysis = async (req: any, res: any) => {
     const today = new Date();
 
     for (const studentId of student_ids) {
-      // Get student's center if not provided
-      let studentCenter = center_id;
-      if (!studentCenter) {
-        const studentResult = await debt_db.query('SELECT center_id FROM students WHERE student_id = $1', [studentId]);
-        if (studentResult.rows.length > 0) {
-          studentCenter = studentResult.rows[0].center_id;
-        }
+      // Verify the student belongs to the requesting superuser's center
+      const studentCheck = await debt_db.query('SELECT center_id FROM students WHERE student_id = $1 AND center_id = $2', [studentId, center_id]);
+      if (studentCheck.rows.length === 0) {
+        continue; // Skip students not belonging to this center
       }
 
-      if (studentCenter) {
-        const result = await debt_db.query(`
+      const result = await debt_db.query(`
           INSERT INTO debts (student_id, center_id, debt_amount, debt_date, due_date, amount_paid, balance, remarks)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           RETURNING *
         `, [
-          studentId,
-          studentCenter,
-          monthly_fee,
-          today,
-          new Date(today.getFullYear(), today.getMonth() + 1, 15), // Due 15th of next month
-          0,
-          monthly_fee,
-          remarks || 'Generated from unpaid months analysis'
-        ]);
-        createdDebts.push(result.rows[0]);
-      }
+        studentId,
+        center_id,
+        monthly_fee,
+        today,
+        new Date(today.getFullYear(), today.getMonth() + 1, 15), // Due 15th of next month
+        0,
+        monthly_fee,
+        remarks || 'Generated from unpaid months analysis'
+      ]);
+      createdDebts.push(result.rows[0]);
     }
 
     res.status(201).json({

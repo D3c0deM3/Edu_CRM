@@ -17,6 +17,8 @@ CREATE TABLE teachers (
     specialization VARCHAR(100),
     status teacher_status DEFAULT 'Active',
     roles JSONB,
+    username VARCHAR(100) UNIQUE,
+    password_hash VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (center_id) REFERENCES edu_centers(center_id)

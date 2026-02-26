@@ -9,6 +9,8 @@ CREATE TABLE students (
     enrollment_number VARCHAR(50) NOT NULL UNIQUE,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
+    username VARCHAR(100) UNIQUE,
+    password_hash VARCHAR(255),
     email VARCHAR(100),
     phone VARCHAR(20),
     date_of_birth DATE,

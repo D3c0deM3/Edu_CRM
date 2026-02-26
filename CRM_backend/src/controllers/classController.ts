@@ -2,7 +2,11 @@ const class_db = require('../../config/dbcon');
 
 exports.getAllClasses = async (req: any, res: any) => {
   try {
-    const result = await class_db.query('SELECT * FROM classes ORDER BY class_id');
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const result = await class_db.query('SELECT * FROM classes WHERE center_id = $1 ORDER BY class_id', [center_id]);
     res.json(result.rows);
   } catch (error: any) {
     console.error('Database error:', error);

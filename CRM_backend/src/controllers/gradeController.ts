@@ -2,7 +2,17 @@ const grade_db = require('../../config/dbcon');
 
 exports.getAllGrades = async (req: any, res: any) => {
   try {
-    const result = await grade_db.query('SELECT * FROM grades ORDER BY grade_id DESC');
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const result = await grade_db.query(`
+      SELECT g.*
+      FROM grades g
+      JOIN students s ON g.student_id = s.student_id
+      WHERE s.center_id = $1
+      ORDER BY g.grade_id DESC
+    `, [center_id]);
     res.json(result.rows);
   } catch (error) {
     console.error('Database error:', error);

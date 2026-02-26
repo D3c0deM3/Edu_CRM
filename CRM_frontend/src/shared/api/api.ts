@@ -32,14 +32,17 @@ apiClient.interceptors.response.use(
   (error) => {
     // Handle 401 (unauthorized) - token expired or invalid
     if (error.response?.status === 401) {
-      // Clear auth data and redirect to login
+      // Clear auth data and redirect to appropriate login page
+      const storedUser = localStorage.getItem('user');
+      const userType = storedUser ? JSON.parse(storedUser)?.userType : null;
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       const errorMessage = error.response?.data?.error || 'Session expired. Please log in again.';
       showToast.error(errorMessage);
-      // Redirect to login page
+      // Redirect to the correct login page for the user's role
+      const loginPath = userType === 'student' ? '/login/student' : userType === 'teacher' ? '/login/teacher' : '/login/superuser';
       if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login/superuser';
+        window.location.href = loginPath;
       }
       return Promise.reject(error);
     }

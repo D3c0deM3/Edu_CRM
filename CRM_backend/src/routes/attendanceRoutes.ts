@@ -1,6 +1,7 @@
 const express_att = require('express');
 const router_att = express_att.Router();
 const attendanceController = require('../controllers/attendanceController');
+const { requireRole } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -62,7 +63,7 @@ router_att.get('/:id', attendanceController.getAttendanceById);
  *       400:
  *         description: Invalid input
  */
-router_att.post('/', attendanceController.createAttendance);
+router_att.post('/', requireRole('superuser', 'teacher'), attendanceController.createAttendance);
 
 /**
  * @swagger
@@ -88,7 +89,7 @@ router_att.post('/', attendanceController.createAttendance);
  *       404:
  *         description: Attendance record not found
  */
-router_att.put('/:id', attendanceController.updateAttendance);
+router_att.put('/:id', requireRole('superuser', 'teacher'), attendanceController.updateAttendance);
 
 /**
  * @swagger
@@ -160,6 +161,8 @@ router_att.get('/class/:classId', attendanceController.getAttendanceByClass);
  *       404:
  *         description: Attendance record not found
  */
-router_att.delete('/:id', attendanceController.deleteAttendance);
+router_att.delete('/:id', requireRole('superuser', 'teacher'), attendanceController.deleteAttendance);
 
 module.exports = router_att;
+
+export {};

@@ -2,7 +2,17 @@ const db = require('../../config/dbcon');
 
 exports.getAllAttendance = async (req: any, res: any) => {
   try {
-    const result = await db.query('SELECT * FROM attendance ORDER BY attendance_id DESC');
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const result = await db.query(`
+      SELECT a.*
+      FROM attendance a
+      JOIN classes c ON a.class_id = c.class_id
+      WHERE c.center_id = $1
+      ORDER BY a.attendance_id DESC
+    `, [center_id]);
     res.json(result.rows);
   } catch (error) {
     console.error('Database error:', error);

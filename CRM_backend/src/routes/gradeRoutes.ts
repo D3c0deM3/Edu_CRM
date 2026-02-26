@@ -1,6 +1,7 @@
 const express_grade = require('express');
 const router_grade = express_grade.Router();
 const gradeController = require('../controllers/gradeController');
+const { requireRole } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -62,7 +63,7 @@ router_grade.get('/:id', gradeController.getGradeById);
  *       400:
  *         description: Invalid input
  */
-router_grade.post('/', gradeController.createGrade);
+router_grade.post('/', requireRole('superuser', 'teacher'), gradeController.createGrade);
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ router_grade.post('/', gradeController.createGrade);
  *       400:
  *         description: Invalid input
  */
-router_grade.post('/bulk', gradeController.createBulkGrades);
+router_grade.post('/bulk', requireRole('superuser', 'teacher'), gradeController.createBulkGrades);
 
 /**
  * @swagger
@@ -113,7 +114,7 @@ router_grade.post('/bulk', gradeController.createBulkGrades);
  *       404:
  *         description: Grade not found
  */
-router_grade.put('/:id', gradeController.updateGrade);
+router_grade.put('/:id', requireRole('superuser', 'teacher'), gradeController.updateGrade);
 
 /**
  * @swagger
@@ -159,6 +160,8 @@ router_grade.get('/student/:studentId', gradeController.getGradesByStudent);
  *       404:
  *         description: Grade not found
  */
-router_grade.delete('/:id', gradeController.deleteGrade);
+router_grade.delete('/:id', requireRole('superuser', 'teacher'), gradeController.deleteGrade);
 
 module.exports = router_grade;
+
+export {};

@@ -28,7 +28,11 @@ const createTeacherSchema = z.object({
 
 exports.getAllTeachers = async (req: any, res: any) => {
   try {
-    const result = await pool.query('SELECT * FROM teachers ORDER BY teacher_id');
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const result = await pool.query('SELECT * FROM teachers WHERE center_id = $1 ORDER BY teacher_id', [center_id]);
     res.json(result.rows);
   } catch (error: any) {
     console.error('Database error:', error);

@@ -302,11 +302,10 @@ const ClassesPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="level">Level *</Label>
+                <Label htmlFor="level">Level</Label>
                 <Input
                   id="level"
                   type="number"
-                  required
                   value={formData.level || ''}
                   onChange={(e) => setFormData({ ...formData, level: Number(e.target.value) })}
                 />
@@ -325,10 +324,9 @@ const ClassesPage = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="room_number">Room Number *</Label>
+                <Label htmlFor="room_number">Room Number</Label>
                 <Input
                   id="room_number"
-                  required
                   value={formData.room_number || ''}
                   onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
                 />
@@ -336,11 +334,10 @@ const ClassesPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="payment_amount">Payment Amount *</Label>
+                <Label htmlFor="payment_amount">Payment Amount</Label>
                 <Input
                   id="payment_amount"
                   type="number"
-                  required
                   step="0.01"
                   value={formData.payment_amount || ''}
                   onChange={(e) => setFormData({ ...formData, payment_amount: Number(e.target.value) })}

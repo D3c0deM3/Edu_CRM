@@ -12,6 +12,9 @@
 
 require('dotenv/config');
 const { Pool } = require('pg');
+const crypto = require('crypto');
+
+const hashPassword = (password) => crypto.createHash('sha256').update(password).digest('hex');
 
 const pool = new Pool({
   user:     process.env.DB_USER     || 'postgres',
@@ -65,7 +68,7 @@ async function main() {
          (center_id, username, email, password_hash, first_name, last_name, role, permissions, status)
        VALUES ($1, $2, $3, $4, $5, $6, 'Admin', '{}', 'Active')
        RETURNING superuser_id, username, email, first_name, last_name, role, status, created_at`,
-      [centerId, USERNAME, EMAIL, PASSWORD, FIRST_NAME, LAST_NAME]
+      [centerId, USERNAME, EMAIL, hashPassword(PASSWORD), FIRST_NAME, LAST_NAME]
     );
 
     const admin = result.rows[0];

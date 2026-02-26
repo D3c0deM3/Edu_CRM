@@ -9,12 +9,17 @@ const hashPassword1 = (password: string) => {
 
 exports.getAllStudents = async (req: any, res: any) => {
   try {
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
     const result = await student_db.query(`
       SELECT s.*, c.class_name 
       FROM students s 
       LEFT JOIN classes c ON s.class_id = c.class_id 
+      WHERE s.center_id = $1
       ORDER BY s.student_id
-    `);
+    `, [center_id]);
     res.json(result.rows);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -147,10 +152,11 @@ exports.setStudentPassword = async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    // Store password as plain text without encryption
+    // Hash password before storing
+    const password_hash = hashPassword1(password);
     const result = await student_db.query(
       'UPDATE students SET username = $1, password_hash = $2, updated_at = CURRENT_TIMESTAMP WHERE student_id = $3 RETURNING student_id, username, email',
-      [username, password, id]
+      [username, password_hash, id]
     );
     
     if (result.rows.length === 0) {

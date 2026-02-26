@@ -63,7 +63,7 @@ router_teacher.get('/:id', teacherController.getTeacherById);
  *       400:
  *         description: Invalid input
  */
-router_teacher.post('/', teacherController.createTeacher);
+router_teacher.post('/', requireRole('superuser'), teacherController.createTeacher);
 
 /**
  * @swagger
@@ -89,7 +89,7 @@ router_teacher.post('/', teacherController.createTeacher);
  *       404:
  *         description: Teacher not found
  */
-router_teacher.put('/:id', teacherController.updateTeacher);
+router_teacher.put('/:id', requireRole('superuser'), teacherController.updateTeacher);
 
 /**
  * @swagger

@@ -2,7 +2,17 @@ const assignment_db = require('../../config/dbcon');
 
 exports.getAllAssignments = async (req: any, res: any) => {
   try {
-    const result = await assignment_db.query('SELECT * FROM assignments ORDER BY assignment_id DESC');
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const result = await assignment_db.query(`
+      SELECT a.*
+      FROM assignments a
+      JOIN classes c ON a.class_id = c.class_id
+      WHERE c.center_id = $1
+      ORDER BY a.assignment_id DESC
+    `, [center_id]);
     res.json(result.rows);
   } catch (error: any) {
     console.error('Database error:', error);

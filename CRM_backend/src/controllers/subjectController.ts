@@ -2,7 +2,17 @@ const subject_DB = require('../../config/dbcon');
 
 exports.getAllSubjects = async (req: any, res: any) => {
   try {
-    const result = await subject_DB.query('SELECT * FROM subjects ORDER BY subject_id DESC');
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+    const result = await subject_DB.query(`
+      SELECT s.*
+      FROM subjects s
+      JOIN classes c ON s.class_id = c.class_id
+      WHERE c.center_id = $1
+      ORDER BY s.subject_id DESC
+    `, [center_id]);
     res.json(result.rows);
   } catch (error) {
     console.error('Database error:', error);

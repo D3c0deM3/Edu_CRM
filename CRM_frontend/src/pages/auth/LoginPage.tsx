@@ -97,7 +97,7 @@ export const LoginPage = ({ userType }: LoginPageProps) => {
           last_name: superuser.last_name,
           role: superuser.role,
           userType: 'superuser' as const,
-          center_id: superuser.center_id || 1,
+          center_id: superuser.center_id,
         };
         token = response.data.token || `superuser-token-${Date.now()}`;
       } else if (userType === 'teacher') {

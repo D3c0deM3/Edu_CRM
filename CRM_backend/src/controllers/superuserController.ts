@@ -35,13 +35,15 @@ exports.createSuperuser = async (req: any, res: any) => {
   try {
     let { center_id, username, email, password, first_name, last_name, role, permissions, status } = req.body;
     
-    // If center_id is not provided, get the first available center
+    // center_id is required; do not auto-assign an existing center to a new superuser
     if (!center_id) {
-      const centerResult = await superuser_db.query('SELECT center_id FROM edu_centers LIMIT 1');
-      if (centerResult.rows.length === 0) {
-        return res.status(400).json({ error: 'No centers available. Please create a center first.' });
-      }
-      center_id = centerResult.rows[0].center_id;
+      return res.status(400).json({ error: 'center_id is required. Please provide the center this superuser belongs to.' });
+    }
+
+    // Verify the center exists
+    const centerExists = await superuser_db.query('SELECT center_id FROM edu_centers WHERE center_id = $1', [center_id]);
+    if (centerExists.rows.length === 0) {
+      return res.status(400).json({ error: 'Center not found. Please provide a valid center_id.' });
     }
     
     // Check if username already exists
@@ -50,12 +52,13 @@ exports.createSuperuser = async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username already exists' });
     }
 
-    // Store password as plain text without encryption
+    // Hash password before storing
+    const password_hash = hashPassword2(password);
     // Normalize status to match enum values (Active, Inactive, Suspended)
     const normalizedStatus = status ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() : 'Active';
     const result = await superuser_db.query(
       'INSERT INTO superusers (center_id, username, email, password_hash, first_name, last_name, role, permissions, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING superuser_id, center_id, username, email, first_name, last_name, role, status, created_at',
-      [center_id, username, email, password, first_name, last_name, role || 'Admin', permissions || {}, normalizedStatus]
+      [center_id, username, email, password_hash, first_name, last_name, role || 'Admin', permissions || {}, normalizedStatus]
     );
     res.status(201).json(result.rows[0]);
   } catch (error: any) {
@@ -106,7 +109,7 @@ exports.login = async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const result = await superuser_db.query('SELECT superuser_id, username, email, first_name, last_name, role, password_hash, status, is_locked FROM superusers WHERE username = $1', [username]);
+    const result = await superuser_db.query('SELECT superuser_id, center_id, username, email, first_name, last_name, role, password_hash, status, is_locked FROM superusers WHERE username = $1', [username]);
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'No superuser found with the provided username' });
     }
@@ -121,7 +124,7 @@ exports.login = async (req: any, res: any) => {
       return res.status(403).json({ error: 'Account is not active' });
     }
 
-    const password_hash = password;
+    const password_hash = hashPassword2(password);
     if (password_hash !== superuser.password_hash) {
       // Update login attempts
       await superuser_db.query('UPDATE superusers SET login_attempts = login_attempts + 1 WHERE superuser_id = $1', [superuser.superuser_id]);
@@ -138,6 +141,7 @@ exports.login = async (req: any, res: any) => {
       email: superuser.email,
       userType: 'superuser',
       role: superuser.role,
+      center_id: superuser.center_id,
     });
 
     res.json({
@@ -145,6 +149,7 @@ exports.login = async (req: any, res: any) => {
       token,
       superuser: {
         superuser_id: superuser.superuser_id,
+        center_id: superuser.center_id,
         username: superuser.username,
         email: superuser.email,
         first_name: superuser.first_name,
@@ -172,12 +177,12 @@ exports.changePassword = async (req: any, res: any) => {
       return res.status(404).json({ error: 'Superuser not found' });
     }
 
-    const old_hash = old_password;
+    const old_hash = hashPassword2(old_password);
     if (old_hash !== result.rows[0].password_hash) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    const new_hash = new_password;
+    const new_hash = hashPassword2(new_password);
     await superuser_db.query('UPDATE superusers SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE superuser_id = $2', [new_hash, id]);
     
     res.json({ message: 'Password changed successfully' });

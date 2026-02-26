@@ -51,14 +51,14 @@ app.post('/api/superusers/auth/login', require('./controllers/superuserControlle
 // Students: superuser and teacher can manage; students can view own data via portal
 app.use('/api/students', requireAuth, requireRole('superuser', 'teacher'), studentRoutes);
 
-// Teachers: superuser only for management
-app.use('/api/teachers', requireAuth, requireRole('superuser'), teacherRoutes);
+// Teachers: superuser manages; teachers read
+app.use('/api/teachers', requireAuth, requireRole('superuser', 'teacher'), teacherRoutes);
 
 // Classes: superuser and teacher
 app.use('/api/classes', requireAuth, requireRole('superuser', 'teacher'), classRoutes);
 
-// Centers: superuser only
-app.use('/api/centers', requireAuth, requireRole('superuser'), centerRoutes);
+// Centers: superuser manages; teachers read
+app.use('/api/centers', requireAuth, requireRole('superuser', 'teacher'), centerRoutes);
 
 // Payments: superuser only
 app.use('/api/payments', requireAuth, requireRole('superuser'), paymentRoutes);
@@ -66,11 +66,11 @@ app.use('/api/payments', requireAuth, requireRole('superuser'), paymentRoutes);
 // Debts: superuser only
 app.use('/api/debts', requireAuth, requireRole('superuser'), debtRoutes);
 
-// Grades: superuser and teacher
-app.use('/api/grades', requireAuth, requireRole('superuser', 'teacher'), gradeRoutes);
+// Grades: superuser and teacher manage; students can read their own
+app.use('/api/grades', requireAuth, requireRole('superuser', 'teacher', 'student'), gradeRoutes);
 
-// Attendance: superuser and teacher
-app.use('/api/attendance', requireAuth, requireRole('superuser', 'teacher'), attendanceRoutes);
+// Attendance: superuser and teacher manage; students can read their own
+app.use('/api/attendance', requireAuth, requireRole('superuser', 'teacher', 'student'), attendanceRoutes);
 
 // Assignments: superuser and teacher
 app.use('/api/assignments', requireAuth, requireRole('superuser', 'teacher'), assignmentRoutes);

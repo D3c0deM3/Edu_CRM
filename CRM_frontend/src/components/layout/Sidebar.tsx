@@ -72,8 +72,10 @@ const Sidebar = memo(() => {
   });
 
   const handleLogout = () => {
+    const userType = user?.userType;
     dispatch(logout());
-    navigate('/login/superuser');
+    const loginPath = userType === 'student' ? '/login/student' : userType === 'teacher' ? '/login/teacher' : '/login/superuser';
+    navigate(loginPath);
   };
 
   const handleNavigation = (path: string) => {
