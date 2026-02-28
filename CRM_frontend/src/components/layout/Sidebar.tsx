@@ -49,7 +49,7 @@ const Sidebar = memo(() => {
   }, []);
 
   const menuItems = [
-    { label: 'Dashboard', path: '/dashboard', iconName: 'Dashboard', roles: ['superuser', 'teacher'] },
+    { label: 'Dashboard', path: '/dashboard', iconName: 'Dashboard', roles: ['superuser'] },
     { label: 'My Portal', path: '/teacher-portal', iconName: 'MdPeople', roles: ['teacher'] },
     { label: 'My Portal', path: '/student-portal', iconName: 'MdPerson', roles: ['student'] },
     { label: 'My Tests', path: '/my-tests', iconName: 'MdQuiz', roles: ['student'] },

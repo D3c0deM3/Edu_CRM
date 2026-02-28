@@ -127,8 +127,7 @@ exports.teacherLogin = async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const result = await pool.query('SELECT teacher_id, first_name, last_name, email, password_hash, status FROM teachers WHERE username = $1', [username]);
-    console.log(result)
+    const result = await pool.query('SELECT teacher_id, first_name, last_name, email, password_hash, status, center_id, roles FROM teachers WHERE username = $1', [username]);
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
@@ -143,11 +142,12 @@ exports.teacherLogin = async (req: any, res: any) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    // Generate JWT token
+    // Generate JWT token - include center_id so protected endpoints work
     const token = generateToken({
       id: teacher.teacher_id,
       email: teacher.email,
       userType: 'teacher',
+      center_id: teacher.center_id,
     });
 
     res.json({
@@ -157,7 +157,9 @@ exports.teacherLogin = async (req: any, res: any) => {
         teacher_id: teacher.teacher_id,
         first_name: teacher.first_name,
         last_name: teacher.last_name,
-        email: teacher.email
+        email: teacher.email,
+        center_id: teacher.center_id,
+        roles: teacher.roles || ['teacher'],
       }
     });
   } catch (error: any) {

@@ -101,3 +101,27 @@ exports.deleteAttendance = async (req: any, res: any) => {
     res.status(500).json({ error: 'Failed to delete attendance', details: error.message || error.toString() });
   }
 };
+
+exports.createBulkAttendance = async (req: any, res: any) => {
+  try {
+    const { records } = req.body;
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'records must be a non-empty array' });
+    }
+
+    const results: any[] = [];
+    for (const record of records) {
+      const { student_id, teacher_id, class_id, attendance_date, status, remarks } = record;
+      const result = await db.query(
+        'INSERT INTO attendance (student_id, teacher_id, class_id, attendance_date, status, remarks) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [student_id, teacher_id, class_id, attendance_date, status || 'Present', remarks]
+      );
+      results.push(result.rows[0]);
+    }
+
+    res.status(201).json({ message: `${results.length} attendance records created successfully`, attendance: results });
+  } catch (error: any) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'Failed to create bulk attendance', details: error.message || error.toString() });
+  }
+};

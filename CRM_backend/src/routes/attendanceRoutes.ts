@@ -67,6 +67,31 @@ router_att.post('/', requireRole('superuser', 'teacher'), attendanceController.c
 
 /**
  * @swagger
+ * /attendance/bulk:
+ *   post:
+ *     summary: Create multiple attendance records at once
+ *     tags: [Attendance]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               records:
+ *                 type: array
+ *                 items:
+ *                   $ref: '#/components/schemas/Attendance'
+ *     responses:
+ *       201:
+ *         description: Attendance records created successfully
+ *       400:
+ *         description: Invalid input
+ */
+router_att.post('/bulk', requireRole('superuser', 'teacher'), attendanceController.createBulkAttendance);
+
+/**
+ * @swagger
  * /attendance/{id}:
  *   put:
  *     summary: Update attendance record

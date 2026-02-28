@@ -47,14 +47,27 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Unauthorized page
-const UnauthorizedPage = () => (
-  <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-center">
-    <h1 className="text-4xl font-bold text-destructive">Access Denied</h1>
-    <p className="text-muted-foreground">You don't have permission to access this resource.</p>
-    <a href="/dashboard" className="text-primary hover:underline font-medium">Go to Dashboard</a>
-  </div>
-);
+// Unauthorized page – redirect link adapts to user role
+const UnauthorizedPage = () => {
+  const { user } = useAppSelector((state: any) => state.auth);
+  const homePath = user?.userType === 'teacher'
+    ? '/teacher-portal'
+    : user?.userType === 'student'
+      ? '/student-portal'
+      : '/dashboard';
+  const homeLabel = user?.userType === 'teacher'
+    ? 'Go to Teacher Portal'
+    : user?.userType === 'student'
+      ? 'Go to Student Portal'
+      : 'Go to Dashboard';
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-center">
+      <h1 className="text-4xl font-bold text-destructive">Access Denied</h1>
+      <p className="text-muted-foreground">You don't have permission to access this resource.</p>
+      <a href={homePath} className="text-primary hover:underline font-medium">{homeLabel}</a>
+    </div>
+  );
+};
 
 // Role-based redirect for default/catch-all routes
 const RoleBasedRedirect = () => {
@@ -109,7 +122,7 @@ function AppContent() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher']}>
+          <ProtectedRoute allowedUserTypes={['superuser']}>
             <Layout>
               <Dashboard />
             </Layout>

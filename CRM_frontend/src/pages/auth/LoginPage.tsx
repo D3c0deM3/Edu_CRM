@@ -112,7 +112,7 @@ export const LoginPage = ({ userType }: LoginPageProps) => {
           role: 'teacher',
           roles: teacher.roles || ['teacher'],
           userType: 'teacher' as const,
-          center_id: teacher.center_id || 1,
+          center_id: teacher.center_id,
         };
         token = response.data.token || `teacher-token-${Date.now()}`;
       } else if (userType === 'student') {

@@ -110,6 +110,7 @@ export const attendanceAPI = {
   getByStudent: (studentId: number) => apiClient.get(`/attendance/student/${studentId}`),
   getByClass: (classId: number) => apiClient.get(`/attendance/class/${classId}`),
   create: (data: any) => apiClient.post('/attendance', data),
+  bulkCreate: (records: any[]) => apiClient.post('/attendance/bulk', { records }),
   update: (id: number, data: any) => apiClient.put(`/attendance/${id}`, data),
   delete: (id: number) => apiClient.delete(`/attendance/${id}`),
 };

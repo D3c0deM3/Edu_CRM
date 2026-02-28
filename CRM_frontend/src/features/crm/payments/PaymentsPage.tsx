@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, Trash2, X, ArrowLeft, Folder, Search, Filter, User, BookOpen, Plus, DollarSign, CreditCard, Users, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, X, ArrowLeft, Folder, Search, Filter, User, BookOpen, Plus, DollarSign, CreditCard, Users, Loader2, ChevronLeft, ChevronRight, Zap, SlidersHorizontal } from 'lucide-react';
 import { useCRUD } from '../hooks/useCRUD';
 import { paymentAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
-import { fetchStudents, fetchCenters, paymentMethodOptions, paymentStatusOptions, paymentTypeOptions, currencyOptions } from '../../../utils/dropdownOptions';
+import { fetchStudents, fetchTeachers, fetchClasses, fetchCenters, paymentMethodOptions, paymentStatusOptions, paymentTypeOptions, currencyOptions } from '../../../utils/dropdownOptions';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -33,19 +33,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useAppSelector } from '../hooks';
+import type { RootState } from '../../../store';
 
 interface Payment {
   payment_id?: number;
   id?: number;
   student_id: number;
   center_id: number;
+  class_id?: number;
   payment_date: string;
-  amount: number;
+  amount: number | string;
   currency: string;
   payment_method: string;
   payment_type: string;
-  status: string;
+  payment_status?: string;
+  status?: string;
   receipt_number: string;
+  transaction_reference?: string;
   reference_number?: string;
   notes?: string;
 }
@@ -79,33 +84,58 @@ interface Student {
 type TabType = 'students' | 'classes' | 'teachers';
 type FolderType = 'teacher' | 'class' | 'student';
 
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function generateReceiptNumber() {
+  return `RCP-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`;
+}
+
 const PaymentsPage = () => {
+  const { user } = useAppSelector((state: RootState) => state.auth);
   const [state, actions] = useCRUD<Payment>(paymentAPI, 'Payment');
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('students');
   const [selectedFolder, setSelectedFolder] = useState<{ type: FolderType; id: number; name: string } | null>(null);
-  
+
+  // Quick-pay state
+  const now = new Date();
+  const [quickYear, setQuickYear] = useState(now.getFullYear());
+  const [quickMonth, setQuickMonth] = useState(now.getMonth()); // 0-indexed
+  const [quickAmount, setQuickAmount] = useState('');
+  const [quickMethod, setQuickMethod] = useState('Cash');
+  const [quickType, setQuickType] = useState('Tuition');
+  const [quickClassId, setQuickClassId] = useState<number | ''>('');
+  const [quickNotes, setQuickNotes] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [quickSubmitting, setQuickSubmitting] = useState(false);
+
+  // Full modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Partial<Payment>>({
     currency: 'USD',
     payment_method: 'Cash',
     payment_type: 'Tuition',
-    status: 'Completed',
+    payment_status: 'Completed',
   });
   const [studentOptions, setStudentOptions] = useState<Array<{ id?: number; label: string; value: string | number }>>([]);
-  const [teacherOptions, setTeacherOptions] = useState<Array<{ id?: number; label: string; value: string | number }>>([]);
   const [classOptions, setClassOptions] = useState<Array<{ id?: number; label: string; value: string | number }>>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
 
-  // Search and Filter
+  // Card grid search
+  const [cardSearch, setCardSearch] = useState('');
+
+  // Search and Filter (payment table)
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterMethod, setFilterMethod] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterMethod, setFilterMethod] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Quick pay student selector (for class/teacher folder views)
+  const [quickStudentId, setQuickStudentId] = useState<number | ''>('');
 
   useEffect(() => {
     actions.fetchAll();
@@ -122,9 +152,10 @@ const PaymentsPage = () => {
         classAPI.getAll(),
         studentAPI.getAll(),
       ]);
-      setTeachers(Array.isArray(teachersRes.data || teachersRes) ? (teachersRes.data || teachersRes) : []);
-      setClasses(Array.isArray(classesRes.data || classesRes) ? (classesRes.data || classesRes) : []);
-      setStudents(Array.isArray(studentsRes.data || studentsRes) ? (studentsRes.data || studentsRes) : []);
+      const arr = (r: any) => Array.isArray(r?.data) ? r.data : Array.isArray(r) ? r : [];
+      setTeachers(arr(teachersRes));
+      setClasses(arr(classesRes));
+      setStudents(arr(studentsRes));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -135,14 +166,9 @@ const PaymentsPage = () => {
   const loadDropdownOptions = async () => {
     setIsLoadingOptions(true);
     try {
-      const [students, teachers, classes] = await Promise.all([
-        fetchStudents(),
-        fetchTeachers(),
-        fetchClasses(),
-      ]);
-      setStudentOptions(students);
-      setTeacherOptions(teachers);
-      setClassOptions(classes);
+      const [studs, clss] = await Promise.all([fetchStudents(), fetchClasses()]);
+      setStudentOptions(studs);
+      setClassOptions(clss);
     } catch (error) {
       console.error('Error loading dropdown options:', error);
     } finally {
@@ -150,6 +176,45 @@ const PaymentsPage = () => {
     }
   };
 
+  // ── Quick Pay ──
+  const handleQuickPay = async () => {
+    if (!quickAmount || !selectedFolder) return;
+    setQuickSubmitting(true);
+    try {
+      const payDate = new Date(quickYear, quickMonth, 1).toISOString().split('T')[0];
+      const studentId = selectedFolder.type === 'student' ? selectedFolder.id : Number(quickStudentId);
+      await actions.create({
+        student_id: studentId,
+        center_id: user?.center_id || 1,
+        class_id: quickClassId || undefined,
+        payment_date: payDate,
+        amount: Number(quickAmount),
+        currency: 'USD',
+        payment_method: quickMethod,
+        payment_type: quickType,
+        payment_status: 'Completed',
+        receipt_number: generateReceiptNumber(),
+        notes: quickNotes || undefined,
+      });
+      setQuickAmount('');
+      setQuickNotes('');
+      if (selectedFolder.type !== 'student') setQuickStudentId('');
+    } finally {
+      setQuickSubmitting(false);
+    }
+  };
+
+  const prevMonth = () => {
+    if (quickMonth === 0) { setQuickMonth(11); setQuickYear(y => y - 1); }
+    else setQuickMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (quickMonth === 11) { setQuickMonth(0); setQuickYear(y => y + 1); }
+    else setQuickMonth(m => m + 1);
+  };
+  const isCurrentMonth = quickYear === now.getFullYear() && quickMonth === now.getMonth();
+
+  // ── Full modal ──
   const handleOpenModal = (payment?: Payment) => {
     if (payment) {
       setEditingId(payment.payment_id || payment.id || null);
@@ -157,10 +222,14 @@ const PaymentsPage = () => {
     } else {
       setEditingId(null);
       setFormData({
+        student_id: selectedFolder?.type === 'student' ? selectedFolder.id : undefined,
+        center_id: user?.center_id || 1,
         currency: 'USD',
         payment_method: 'Cash',
         payment_type: 'Tuition',
-        status: 'Completed',
+        payment_status: 'Completed',
+        payment_date: new Date().toISOString().split('T')[0],
+        receipt_number: generateReceiptNumber(),
       });
     }
     setIsModalOpen(true);
@@ -169,12 +238,7 @@ const PaymentsPage = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({
-      currency: 'USD',
-      payment_method: 'Cash',
-      payment_type: 'Tuition',
-      status: 'Completed',
-    });
+    setFormData({ currency: 'USD', payment_method: 'Cash', payment_type: 'Tuition', payment_status: 'Completed' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,7 +246,7 @@ const PaymentsPage = () => {
     if (editingId) {
       await actions.update(editingId, formData);
     } else {
-      await actions.create(formData);
+      await actions.create({ ...formData, receipt_number: formData.receipt_number || generateReceiptNumber() });
     }
     handleCloseModal();
   };
@@ -193,129 +257,107 @@ const PaymentsPage = () => {
     }
   };
 
-  // Get student IDs for a teacher
-  const getStudentIdsForTeacher = (teacherId: number): number[] => {
-    return students
-      .filter((s) => s.teacher_id === teacherId)
-      .map((s) => s.student_id || s.id || 0);
-  };
+  const getStudentIdsForTeacher = (teacherId: number) =>
+    students.filter((s) => s.teacher_id === teacherId).map((s) => s.student_id || s.id || 0);
+  const getStudentIdsForClass = (classId: number) =>
+    students.filter((s) => s.class_id === classId).map((s) => s.student_id || s.id || 0);
 
-  // Get student IDs for a class
-  const getStudentIdsForClass = (classId: number): number[] => {
-    return students
-      .filter((s) => s.class_id === classId)
-      .map((s) => s.student_id || s.id || 0);
+  const getPaymentCountForTeacher = (tid: number) => {
+    const ids = getStudentIdsForTeacher(tid);
+    return state.items.filter((p) => ids.includes(p.student_id)).length;
   };
-
-  // Get payments count for teacher
-  const getPaymentCountForTeacher = (teacherId: number): number => {
-    const studentIds = getStudentIdsForTeacher(teacherId);
-    return state.items.filter((p) => studentIds.includes(p.student_id)).length;
+  const getPaymentCountForClass = (cid: number) => {
+    const ids = getStudentIdsForClass(cid);
+    return state.items.filter((p) => ids.includes(p.student_id)).length;
   };
-
-  // Get payments count for class
-  const getPaymentCountForClass = (classId: number): number => {
-    const studentIds = getStudentIdsForClass(classId);
-    return state.items.filter((p) => studentIds.includes(p.student_id)).length;
+  const getTotalAmountForClass = (cid: number) => {
+    const ids = getStudentIdsForClass(cid);
+    return state.items.filter((p) => ids.includes(p.student_id) && (p.payment_status || p.status) === 'Completed').reduce((s, p) => s + Number(p.amount || 0), 0);
   };
+  const getPaymentCountForStudent = (sid: number) => state.items.filter((p) => p.student_id === sid).length;
+  const getTotalAmountForStudent = (sid: number) =>
+    state.items.filter((p) => p.student_id === sid && (p.payment_status || p.status) === 'Completed').reduce((s, p) => s + Number(p.amount || 0), 0);
 
-  // Get total amount for class
-  const getTotalAmountForClass = (classId: number): number => {
-    const studentIds = getStudentIdsForClass(classId);
-    return state.items
-      .filter((p) => studentIds.includes(p.student_id) && p.status === 'Completed')
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
-  };
-
-  // Get payments count for student
-  const getPaymentCountForStudent = (studentId: number): number => {
-    return state.items.filter((p) => p.student_id === studentId).length;
-  };
-
-  // Get total amount for student
-  const getTotalAmountForStudent = (studentId: number): number => {
-    return state.items
-      .filter((p) => p.student_id === studentId && p.status === 'Completed')
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
-  };
-
-  // Filter payments based on selected folder
   const getFilteredPayments = (): Payment[] => {
     if (!selectedFolder) return state.items;
-
     let studentIds: number[] = [];
-    if (selectedFolder.type === 'teacher') {
-      studentIds = getStudentIdsForTeacher(selectedFolder.id);
-    } else if (selectedFolder.type === 'class') {
-      studentIds = getStudentIdsForClass(selectedFolder.id);
-    } else if (selectedFolder.type === 'student') {
-      studentIds = [selectedFolder.id];
-    }
+    if (selectedFolder.type === 'teacher') studentIds = getStudentIdsForTeacher(selectedFolder.id);
+    else if (selectedFolder.type === 'class') studentIds = getStudentIdsForClass(selectedFolder.id);
+    else studentIds = [selectedFolder.id];
     return state.items.filter((p) => studentIds.includes(p.student_id));
   };
 
-  // Apply search and filters
   const displayedPayments = useMemo(() => {
     let payments = getFilteredPayments();
-
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
       payments = payments.filter((p) => {
         const student = students.find((s) => (s.student_id || s.id) === p.student_id);
-        const studentName = student ? `${student.first_name} ${student.last_name}`.toLowerCase() : '';
-        return (
-          studentName.includes(search) ||
-          (p.receipt_number && p.receipt_number.toLowerCase().includes(search)) ||
-          (p.reference_number && p.reference_number.toLowerCase().includes(search))
-        );
+        const name = student ? `${student.first_name} ${student.last_name}`.toLowerCase() : '';
+        return name.includes(search) || (p.receipt_number || '').toLowerCase().includes(search);
       });
     }
-
-    if (filterStatus) {
-      payments = payments.filter((p) => p.status === filterStatus);
-    }
-
-    if (filterMethod) {
-      payments = payments.filter((p) => p.payment_method === filterMethod);
-    }
-
+    if (filterStatus !== 'all') payments = payments.filter((p) => (p.payment_status || p.status) === filterStatus);
+    if (filterMethod !== 'all') payments = payments.filter((p) => p.payment_method === filterMethod);
     return payments;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filterStatus, filterMethod, selectedFolder, state.items, students]);
 
-  const hasActiveFilters = filterStatus || filterMethod || searchTerm;
-  const totalAmount = displayedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const hasActiveFilters = filterStatus !== 'all' || filterMethod !== 'all' || !!searchTerm;
+  const totalAmount = displayedPayments.reduce((s, p) => s + Number(p.amount || 0), 0);
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setFilterStatus('');
-    setFilterMethod('');
+  const clearFilters = () => { setSearchTerm(''); setFilterStatus('all'); setFilterMethod('all'); };
+
+  // Returns classes a specific student is enrolled in
+  const getClassesForStudent = (studentId: number) => {
+    const s = students.find((s) => (s.student_id || s.id) === studentId);
+    if (!s?.class_id) return [];
+    return classes.filter((c) => (c.class_id || c.id) === s.class_id);
+  };
+
+  // Class options filtered to a specific student
+  const getClassOptionsForStudent = (studentId: number) => {
+    return getClassesForStudent(studentId).map((c) => ({
+      id: c.class_id || c.id,
+      label: c.class_name,
+      value: c.class_id || c.id || 0,
+    }));
+  };
+
+  // Students belonging to the current folder (class or teacher)
+  const getFolderStudents = () => {
+    if (!selectedFolder) return [];
+    if (selectedFolder.type === 'class') return students.filter((s) => s.class_id === selectedFolder.id);
+    if (selectedFolder.type === 'teacher') return students.filter((s) => s.teacher_id === selectedFolder.id);
+    return [];
   };
 
   const handleFolderClick = (type: FolderType, id: number, name: string) => {
     setSelectedFolder({ type, id, name });
+    setQuickStudentId('');
     clearFilters();
+    if (type === 'class') {
+      setQuickClassId(id);
+    } else if (type === 'student') {
+      const s = students.find((s) => (s.student_id || s.id) === id);
+      setQuickClassId(s?.class_id || '');
+    } else {
+      setQuickClassId('');
+    }
+  };
+  const handleBackToFolders = () => { setSelectedFolder(null); clearFilters(); setCardSearch(''); };
+
+  const getStudentName = (studentId: number) => {
+    const s = students.find((s) => (s.student_id || s.id) === studentId);
+    return s ? `${s.first_name} ${s.last_name}` : 'Unknown Student';
   };
 
-  const handleBackToFolders = () => {
-    setSelectedFolder(null);
-    clearFilters();
-  };
-
-  const getStudentName = (studentId: number): string => {
-    const student = students.find((s) => (s.student_id || s.id) === studentId);
-    return student ? `${student.first_name} ${student.last_name}` : 'Unknown Student';
-  };
-
-  const getStatusBadgeClasses = (status: string): string => {
+  const getStatusBadgeClasses = (status: string) => {
     switch (status) {
-      case 'Completed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Failed':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Completed': return 'bg-green-100 text-green-800 border-green-200';
+      case 'Pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Failed': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -330,466 +372,427 @@ const PaymentsPage = () => {
             </Button>
           )}
           <h1 className="text-2xl font-bold">
-            {selectedFolder
-              ? `${selectedFolder.name} - Payments`
-              : 'Payments Management'}
+            {selectedFolder ? `${selectedFolder.name} — Payments` : 'Payments Management'}
           </h1>
         </div>
-        <Button onClick={() => handleOpenModal()}>
-          <Plus className="h-4 w-4 mr-2" /> Add Payment
+        <Button variant="outline" onClick={() => handleOpenModal()}>
+          <Plus className="h-4 w-4 mr-2" /> Full Form
         </Button>
       </div>
 
-      {state.error && (
-        <Alert className="mb-4">
-          <AlertDescription>{state.error}</AlertDescription>
-        </Alert>
-      )}
+      {state.error && <Alert className="mb-4"><AlertDescription>{state.error}</AlertDescription></Alert>}
 
       {!selectedFolder ? (
         <>
           {/* Tab Navigation */}
           <div className="border-b border-border mb-6">
             <div className="flex space-x-1">
-              <Button
-                variant={activeTab === 'students' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('students')}
-                className="rounded-b-none"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                By Students
-              </Button>
-              <Button
-                variant={activeTab === 'classes' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('classes')}
-                className="rounded-b-none"
-              >
-                <BookOpen className="h-4 w-4 mr-2" />
-                By Classes
-              </Button>
-              <Button
-                variant={activeTab === 'teachers' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('teachers')}
-                className="rounded-b-none"
-              >
-                <User className="h-4 w-4 mr-2" />
-                By Teachers
-              </Button>
+              {([['students', <Users className="h-4 w-4" />, 'By Students'], ['classes', <BookOpen className="h-4 w-4" />, 'By Classes'], ['teachers', <User className="h-4 w-4" />, 'By Teachers']] as const).map(([tab, icon, label]) => (
+                <Button key={tab} variant={activeTab === tab ? 'default' : 'ghost'} onClick={() => setActiveTab(tab)} className="rounded-b-none gap-2">
+                  {icon}{label}
+                </Button>
+              ))}
             </div>
           </div>
 
-          {/* Tab Content */}
-          <div>
-            {/* By Students Tab */}
-            {activeTab === 'students' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loadingData ? (
-                  <div className="col-span-full text-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    <p className="text-muted-foreground">Loading students...</p>
-                  </div>
-                ) : students.length === 0 ? (
-                  <div className="col-span-full text-center py-8">
-                    <p className="text-muted-foreground">No students found</p>
-                  </div>
-                ) : (
-                  students.map((student) => {
-                    const studentId = student.student_id || student.id || 0;
-                    const paymentCount = getPaymentCountForStudent(studentId);
-                    const totalAmount = getTotalAmountForStudent(studentId);
-                    return (
-                      <Card
-                        key={studentId}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => handleFolderClick('student', studentId, `${student.first_name} ${student.last_name}`)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <Folder className="h-9 w-9 text-primary" />
-                          </div>
-                          <div className="space-y-1">
-                            <h3 className="font-semibold">{student.first_name} {student.last_name}</h3>
-                            <p className="text-sm text-muted-foreground">ID: {studentId}</p>
-                          </div>
-                          <div className="flex justify-between items-center mt-3 pt-3 border-t">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <CreditCard className="h-3.5 w-3.5" />
-                              <span>{paymentCount} payments</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm font-semibold text-primary">
-                              <DollarSign className="h-3.5 w-3.5" />
-                              <span>${totalAmount.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            )}
-
-            {/* By Classes Tab */}
-            {activeTab === 'classes' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loadingData ? (
-                  <div className="col-span-full text-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    <p className="text-muted-foreground">Loading classes...</p>
-                  </div>
-                ) : classes.length === 0 ? (
-                  <div className="col-span-full text-center py-8">
-                    <p className="text-muted-foreground">No classes found</p>
-                  </div>
-                ) : (
-                  classes.map((cls) => {
-                    const classId = cls.class_id || cls.id || 0;
-                    const paymentCount = getPaymentCountForClass(classId);
-                    const totalAmount = getTotalAmountForClass(classId);
-                    return (
-                      <Card
-                        key={classId}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => handleFolderClick('class', classId, cls.class_name)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <Folder className="h-9 w-9 text-primary" />
-                          </div>
-                          <div className="space-y-1">
-                            <h3 className="font-semibold">{cls.class_name}</h3>
-                            <p className="text-sm text-muted-foreground">{cls.class_code} • Level {cls.level}</p>
-                          </div>
-                          <div className="flex justify-between items-center mt-3 pt-3 border-t">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <CreditCard className="h-3.5 w-3.5" />
-                              <span>{paymentCount} payments</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm font-semibold text-primary">
-                              <DollarSign className="h-3.5 w-3.5" />
-                              <span>${totalAmount.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            )}
-
-            {/* By Teachers Tab */}
-            {activeTab === 'teachers' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {loadingData ? (
-                  <div className="col-span-full text-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                    <p className="text-muted-foreground">Loading teachers...</p>
-                  </div>
-                ) : teachers.length === 0 ? (
-                  <div className="col-span-full text-center py-8">
-                    <p className="text-muted-foreground">No teachers found</p>
-                  </div>
-                ) : (
-                  teachers.map((teacher) => {
-                    const teacherId = teacher.teacher_id || teacher.id || 0;
-                    const paymentCount = getPaymentCountForTeacher(teacherId);
-                    return (
-                      <Card
-                        key={teacherId}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => handleFolderClick('teacher', teacherId, `${teacher.first_name} ${teacher.last_name}`)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <Folder className="h-9 w-9 text-primary" />
-                          </div>
-                          <div className="space-y-1">
-                            <h3 className="font-semibold">{teacher.first_name} {teacher.last_name}</h3>
-                            <p className="text-sm text-muted-foreground">{teacher.employee_id}</p>
-                          </div>
-                          <div className="flex justify-between items-center mt-3 pt-3 border-t">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Users className="h-3.5 w-3.5" />
-                              <span>{getStudentIdsForTeacher(teacherId).length} students</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm font-semibold text-primary">
-                              <CreditCard className="h-3.5 w-3.5" />
-                              <span>{paymentCount} payments</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            )}
+          {/* Card search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={activeTab === 'students' ? 'Search students...' : activeTab === 'classes' ? 'Search classes...' : 'Search teachers...'}
+              value={cardSearch}
+              onChange={(e) => setCardSearch(e.target.value)}
+              className="pl-10"
+            />
+            {cardSearch && <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0" onClick={() => setCardSearch('')}><X className="h-4 w-4" /></Button>}
           </div>
+
+          {loadingData ? (
+            <div className="text-center py-16"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" /><p className="text-muted-foreground">Loading...</p></div>
+          ) : (() => {
+            const cs = cardSearch.toLowerCase();
+            const filteredStudents = students.filter((s) => !cs || `${s.first_name} ${s.last_name}`.toLowerCase().includes(cs));
+            const filteredClasses = classes.filter((c) => !cs || c.class_name.toLowerCase().includes(cs) || c.class_code.toLowerCase().includes(cs));
+            const filteredTeachers = teachers.filter((t) => !cs || `${t.first_name} ${t.last_name}`.toLowerCase().includes(cs) || t.employee_id.toLowerCase().includes(cs));
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {activeTab === 'students' && (filteredStudents.length === 0 ? (
+                  <p className="col-span-full text-center py-8 text-muted-foreground">No students found</p>
+                ) : filteredStudents.map((student) => {
+                  const sid = student.student_id || student.id || 0;
+                  return (
+                    <Card key={sid} className="cursor-pointer hover:shadow-md hover:border-primary/40 transition-all" onClick={() => handleFolderClick('student', sid, `${student.first_name} ${student.last_name}`)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                            {student.first_name[0]}{student.last_name[0]}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold truncate">{student.first_name} {student.last_name}</h3>
+                            <p className="text-xs text-muted-foreground">ID: {sid}</p>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center pt-3 border-t">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground"><CreditCard className="h-3 w-3" />{getPaymentCountForStudent(sid)} payments</div>
+                          <div className="text-sm font-bold text-primary">${getTotalAmountForStudent(sid).toLocaleString()}</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }))}
+                {activeTab === 'classes' && (filteredClasses.length === 0 ? (
+                  <p className="col-span-full text-center py-8 text-muted-foreground">No classes found</p>
+                ) : filteredClasses.map((cls) => {
+                  const cid = cls.class_id || cls.id || 0;
+                  return (
+                    <Card key={cid} className="cursor-pointer hover:shadow-md hover:border-primary/40 transition-all" onClick={() => handleFolderClick('class', cid, cls.class_name)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center"><BookOpen className="h-5 w-5 text-blue-500" /></div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold truncate">{cls.class_name}</h3>
+                            <p className="text-xs text-muted-foreground">{cls.class_code} · Level {cls.level}</p>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center pt-3 border-t">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground"><CreditCard className="h-3 w-3" />{getPaymentCountForClass(cid)} payments</div>
+                          <div className="text-sm font-bold text-primary">${getTotalAmountForClass(cid).toLocaleString()}</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }))}
+                {activeTab === 'teachers' && (filteredTeachers.length === 0 ? (
+                  <p className="col-span-full text-center py-8 text-muted-foreground">No teachers found</p>
+                ) : filteredTeachers.map((teacher) => {
+                  const tid = teacher.teacher_id || teacher.id || 0;
+                  return (
+                    <Card key={tid} className="cursor-pointer hover:shadow-md hover:border-primary/40 transition-all" onClick={() => handleFolderClick('teacher', tid, `${teacher.first_name} ${teacher.last_name}`)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-sm font-bold text-purple-600">
+                            {teacher.first_name[0]}{teacher.last_name[0]}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-semibold truncate">{teacher.first_name} {teacher.last_name}</h3>
+                            <p className="text-xs text-muted-foreground">{teacher.employee_id}</p>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center pt-3 border-t">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground"><Users className="h-3 w-3" />{getStudentIdsForTeacher(tid).length} students</div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground"><CreditCard className="h-3 w-3" />{getPaymentCountForTeacher(tid)} payments</div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }))}
+              </div>
+            );
+          })()}
         </>
       ) : (
-        // PAYMENT LIST VIEW
         <>
-          {/* Search and Filter Bar */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          {/* ══ QUICK PAY PANEL ══ */}
+          {(() => {
+            const folderStudents = getFolderStudents();
+            const isMulti = selectedFolder.type !== 'student';
+            // For multi-folder: resolve student id from quickStudentId; for student folder: use folder id
+            const resolvedStudentId = isMulti ? (quickStudentId || 0) : selectedFolder.id;
+            const studentClassOptions = resolvedStudentId ? getClassOptionsForStudent(resolvedStudentId) : [];
+            return (
+              <Card className="mb-6 border-primary/30 bg-primary/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-primary" /> Quick Pay — {selectedFolder.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Month selector */}
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
+                    <div className="flex-1 text-center">
+                      <p className="font-semibold text-sm">{MONTH_NAMES[quickMonth]} {quickYear}</p>
+                      {isCurrentMonth && <Badge variant="outline" className="text-[10px] border-primary text-primary mt-0.5">Current Month</Badge>}
+                    </div>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
+                    {!isCurrentMonth && (
+                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setQuickMonth(now.getMonth()); setQuickYear(now.getFullYear()); }}>
+                        Today
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Quick month shortcuts */}
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[-2, -1, 0, 1].map((offset) => {
+                      const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+                      const m = d.getMonth(); const y = d.getFullYear();
+                      const active = m === quickMonth && y === quickYear;
+                      return (
+                        <button key={offset} onClick={() => { setQuickMonth(m); setQuickYear(y); }}
+                          className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${active ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:border-primary/50 hover:bg-muted'}`}>
+                          {offset === 0 ? 'This Month' : offset === -1 ? 'Last Month' : MONTH_NAMES[m].slice(0, 3) + ' ' + (y !== now.getFullYear() ? y : '')}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Quick pay fields */}
+                  <div className={`grid grid-cols-1 gap-3 ${isMulti ? 'sm:grid-cols-2 lg:grid-cols-5' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
+                    {/* Student picker — only for class/teacher folders */}
+                    {isMulti && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">Student *</Label>
+                        <Select value={String(quickStudentId)} onValueChange={(v) => {
+                          const sid = v === 'none' ? '' : Number(v);
+                          setQuickStudentId(sid);
+                          // auto-set class to student's class
+                          if (sid) {
+                            const s = students.find((s) => (s.student_id || s.id) === sid);
+                            setQuickClassId(s?.class_id || '');
+                          } else {
+                            setQuickClassId('');
+                          }
+                        }}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Select student" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">— select student —</SelectItem>
+                            {folderStudents.map((s) => {
+                              const sid = s.student_id || s.id || 0;
+                              return <SelectItem key={sid} value={String(sid)}>{s.first_name} {s.last_name}</SelectItem>;
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <Label className="text-xs">Amount *</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          type="number" min="0" step="0.01" placeholder="0.00"
+                          value={quickAmount}
+                          onChange={(e) => setQuickAmount(e.target.value)}
+                          className="pl-7"
+                          onKeyDown={(e) => e.key === 'Enter' && handleQuickPay()}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Class</Label>
+                      <Select
+                        value={String(quickClassId)}
+                        onValueChange={(v) => setQuickClassId(v === 'none' ? '' : Number(v))}
+                        disabled={!resolvedStudentId || studentClassOptions.length === 0}
+                      >
+                        <SelectTrigger className="h-9"><SelectValue placeholder={resolvedStudentId ? (studentClassOptions.length === 0 ? 'No class' : '— none —') : 'Select student first'} /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">— none —</SelectItem>
+                          {studentClassOptions.map((o) => <SelectItem key={o.id} value={String(o.value)}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Method</Label>
+                      <Select value={quickMethod} onValueChange={setQuickMethod}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {paymentMethodOptions.map((o) => <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Type</Label>
+                      <Select value={quickType} onValueChange={setQuickType}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {paymentTypeOptions.map((o) => <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Advanced (notes) toggle */}
+                  <div>
+                    <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => setShowAdvanced(v => !v)}>
+                      <SlidersHorizontal className="h-3 w-3" />{showAdvanced ? 'Hide' : 'Show'} advanced options
+                    </button>
+                    {showAdvanced && (
+                      <div className="mt-2">
+                        <Label className="text-xs">Notes</Label>
+                        <Input placeholder="Optional note..." value={quickNotes} onChange={(e) => setQuickNotes(e.target.value)} className="mt-1" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-1">
+                    <Button
+                      onClick={() => {
+                        if (isMulti && !quickStudentId) return;
+                        handleQuickPay();
+                      }}
+                      disabled={!quickAmount || quickSubmitting || (isMulti && !quickStudentId)}
+                      className="gap-2"
+                    >
+                      {quickSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                      Record Payment
+                    </Button>
+                    <p className="text-xs text-muted-foreground">Receipt auto-generated. Use <strong>Full Form</strong> for custom receipts.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {/* ══ PAYMENT HISTORY TABLE ══ */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search by student, receipt, reference..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-              {searchTerm && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                  onClick={() => setSearchTerm('')}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search by name or receipt..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+              {searchTerm && <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0" onClick={() => setSearchTerm('')}><X className="h-4 w-4" /></Button>}
             </div>
-
-            <Button
-              variant={showFilters ? "default" : "outline"}
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-              {hasActiveFilters && (
-                <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
-                  {(filterStatus ? 1 : 0) + (filterMethod ? 1 : 0)}
-                </span>
-              )}
+            <Button variant={showFilters ? 'default' : 'outline'} onClick={() => setShowFilters(!showFilters)}>
+              <Filter className="h-4 w-4 mr-2" />Filters
             </Button>
-
-            {hasActiveFilters && (
-              <Button variant="outline" size="sm" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-2" /> Clear All
-              </Button>
-            )}
-
-            <div className="text-sm text-muted-foreground flex items-center gap-4">
-              <span>{displayedPayments.length} payments</span>
-              <span className="font-semibold">Total: ${totalAmount.toLocaleString()}</span>
+            {hasActiveFilters && <Button variant="outline" size="sm" onClick={clearFilters}><X className="h-4 w-4 mr-1" />Clear</Button>}
+            <div className="text-sm text-muted-foreground flex items-center gap-3">
+              <span>{displayedPayments.length} records</span>
+              <span className="font-semibold text-foreground">${totalAmount.toLocaleString()}</span>
             </div>
           </div>
 
-          {/* Filter Options */}
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg mb-6">
-              <div className="space-y-2">
-                <Label>Payment Status</Label>
+            <div className="grid grid-cols-2 gap-3 p-4 bg-muted/50 rounded-lg mb-4">
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Status</SelectItem>
-                    {paymentStatusOptions.map((opt) => (
-                      <SelectItem key={opt.id} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
+                    <SelectItem value="all">All Status</SelectItem>
+                    {paymentStatusOptions.map((o) => <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Payment Method</Label>
+              <div className="space-y-1">
+                <Label className="text-xs">Method</Label>
                 <Select value={filterMethod} onValueChange={setFilterMethod}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Methods" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="All Methods" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Methods</SelectItem>
-                    {paymentMethodOptions.map((opt) => (
-                      <SelectItem key={opt.id} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
+                    <SelectItem value="all">All Methods</SelectItem>
+                    {paymentMethodOptions.map((o) => <SelectItem key={o.id} value={o.value}>{o.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
           )}
 
-          {/* Payments Table */}
           <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Receipt #</TableHead>
-                  <TableHead>Student</TableHead>
+                  {selectedFolder.type !== 'student' && <TableHead>Student</TableHead>}
                   <TableHead>Date</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="w-24">Actions</TableHead>
+                  <TableHead className="w-20">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {state.loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-6">Loading...</TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : displayedPayments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
-                      {hasActiveFilters ? 'No payments match your criteria' : 'No payments found'}
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    {hasActiveFilters ? 'No payments match your filters' : 'No payments yet — use Quick Pay above to add one.'}
+                  </TableCell></TableRow>
+                ) : displayedPayments.map((payment) => (
+                  <TableRow key={payment.payment_id || payment.id}>
+                    <TableCell className="font-mono text-xs">{payment.receipt_number}</TableCell>
+                    {selectedFolder.type !== 'student' && <TableCell>{getStudentName(payment.student_id)}</TableCell>}
+                    <TableCell>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell className="font-semibold">${Number(payment.amount || 0).toFixed(2)}</TableCell>
+                    <TableCell>{payment.payment_method}</TableCell>
+                    <TableCell>{payment.payment_type}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getStatusBadgeClasses(payment.payment_status || payment.status || '')}>
+                        {payment.payment_status || payment.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleOpenModal(payment)}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDelete(payment.payment_id || payment.id || 0)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  displayedPayments.map((payment) => (
-                    <TableRow key={payment.payment_id || payment.id}>
-                      <TableCell className="font-mono">{payment.receipt_number}</TableCell>
-                      <TableCell>{getStudentName(payment.student_id)}</TableCell>
-                      <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
-                      <TableCell className="font-semibold">${payment.amount?.toFixed(2)}</TableCell>
-                      <TableCell>{payment.payment_method}</TableCell>
-                      <TableCell>{payment.payment_type}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusBadgeClasses(payment.status)}>
-                          {payment.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="ghost" size="sm" onClick={() => handleOpenModal(payment)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(payment.payment_id || payment.id || 0)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                ))}
               </TableBody>
             </Table>
           </div>
         </>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* Full Add/Edit Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-xl">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Payment' : 'Add New Payment'}</DialogTitle>
+            <DialogTitle>{editingId ? 'Edit Payment' : 'Add Payment'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <SelectField label="Student *" name="student_id" value={formData.student_id || ''} onChange={(v) => {
+                const sid = Number(v);
+                const s = students.find((s) => (s.student_id || s.id) === sid);
+                setFormData({ ...formData, student_id: sid, class_id: s?.class_id || undefined });
+              }} options={studentOptions} isLoading={isLoadingOptions} required placeholder="Select student" />
               <SelectField
-                label="Student"
-                name="student_id"
-                value={formData.student_id || ''}
-                onChange={(value) =>
-                  setFormData({ ...formData, student_id: Number(value) })
-                }
-                options={studentOptions}
+                label="Class"
+                name="class_id"
+                value={formData.class_id || ''}
+                onChange={(v) => setFormData({ ...formData, class_id: v ? Number(v) : undefined })}
+                options={formData.student_id ? getClassOptionsForStudent(formData.student_id) : []}
                 isLoading={isLoadingOptions}
-                required
-                placeholder="Select a student"
-              />
-              <SelectField
-                label="Payment Method"
-                name="payment_method"
-                value={formData.payment_method || ''}
-                onChange={(value) =>
-                  setFormData({ ...formData, payment_method: value })
-                }
-                options={paymentMethodOptions}
-                required
-                placeholder="Select method"
+                placeholder={formData.student_id ? (getClassOptionsForStudent(formData.student_id).length === 0 ? 'No class enrolled' : 'Select class') : 'Select student first'}
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount *</Label>
-                <Input
-                  type="number"
-                  id="amount"
-                  required
-                  step="0.01"
-                  min="0"
-                  value={formData.amount || ''}
-                  onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-                />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Date *</Label>
+                <Input type="date" required value={formData.payment_date || ''} onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="payment_date">Payment Date *</Label>
-                <Input
-                  type="date"
-                  id="payment_date"
-                  required
-                  value={formData.payment_date || ''}
-                  onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
-                />
+              <div className="space-y-1.5">
+                <Label>Amount *</Label>
+                <div className="relative"><DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input type="number" required step="0.01" min="0" value={formData.amount || ''} onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })} className="pl-7" />
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SelectField
-                label="Payment Type"
-                name="payment_type"
-                value={formData.payment_type || ''}
-                onChange={(value) =>
-                  setFormData({ ...formData, payment_type: value })
-                }
-                options={paymentTypeOptions}
-                required
-                placeholder="Select type"
-              />
-              <SelectField
-                label="Status"
-                name="status"
-                value={formData.status || ''}
-                onChange={(value) =>
-                  setFormData({ ...formData, status: value })
-                }
-                options={paymentStatusOptions}
-                required
-                placeholder="Select status"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <SelectField label="Method *" name="payment_method" value={formData.payment_method || ''} onChange={(v) => setFormData({ ...formData, payment_method: v })} options={paymentMethodOptions} required placeholder="Select method" />
+              <SelectField label="Type *" name="payment_type" value={formData.payment_type || ''} onChange={(v) => setFormData({ ...formData, payment_type: v })} options={paymentTypeOptions} required placeholder="Select type" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="receipt_number">Receipt Number *</Label>
-                <Input
-                  type="text"
-                  id="receipt_number"
-                  required
-                  value={formData.receipt_number || ''}
-                  onChange={(e) => setFormData({ ...formData, receipt_number: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reference_number">Reference Number</Label>
-                <Input
-                  type="text"
-                  id="reference_number"
-                  value={formData.reference_number || ''}
-                  onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
-                />
+            <div className="grid grid-cols-2 gap-4">
+              <SelectField label="Status *" name="payment_status" value={formData.payment_status || ''} onChange={(v) => setFormData({ ...formData, payment_status: v })} options={paymentStatusOptions} required placeholder="Select status" />
+              <div className="space-y-1.5">
+                <Label>Receipt Number *</Label>
+                <Input required value={formData.receipt_number || ''} onChange={(e) => setFormData({ ...formData, receipt_number: e.target.value })} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes || ''}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes..."
-              />
+            <div className="space-y-1.5">
+              <Label>Reference Number</Label>
+              <Input value={formData.transaction_reference || ''} onChange={(e) => setFormData({ ...formData, transaction_reference: e.target.value })} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Notes</Label>
+              <Textarea value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Optional notes..." rows={2} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseModal}>Cancel</Button>
+              <Button type="submit" disabled={state.loading}>{state.loading ? 'Saving...' : 'Save Payment'}</Button>
+            </DialogFooter>
           </form>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleCloseModal}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={state.loading} onClick={handleSubmit}>
-              {state.loading ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
