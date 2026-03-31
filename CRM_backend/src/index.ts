@@ -21,9 +21,27 @@ const testRoutes = require('./routes/testRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const corsWhitelist = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://edu-crm-psi.vercel.app',
+  'https://www.edu-crm-psi.vercel.app',
+];
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin: string | undefined, callback: any) => {
+      // Allow requests from non-browser tools and whitelisted browser origins.
+      if (!origin || corsWhitelist.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // function to log the coming requests
