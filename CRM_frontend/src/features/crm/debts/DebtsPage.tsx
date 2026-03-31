@@ -219,8 +219,8 @@ const DebtsPage = () => {
                 label="Student"
                 name="student_id"
                 value={formData.student_id || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, student_id: Number(e.target.value) })
+                onChange={(value) =>
+                  setFormData({ ...formData, student_id: Number(value) })
                 }
                 options={studentOptions}
                 isLoading={isLoadingOptions}
@@ -231,8 +231,8 @@ const DebtsPage = () => {
                 label="Center"
                 name="center_id"
                 value={formData.center_id || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, center_id: Number(e.target.value) })
+                onChange={(value) =>
+                  setFormData({ ...formData, center_id: Number(value) })
                 }
                 options={centerOptions}
                 isLoading={isLoadingOptions}

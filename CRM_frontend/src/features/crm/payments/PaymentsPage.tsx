@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, Trash2, X, ArrowLeft, Folder, Search, Filter, User, BookOpen, Plus, DollarSign, CreditCard, Users, Loader2, ChevronLeft, ChevronRight, Zap, SlidersHorizontal } from 'lucide-react';
+import { Pencil, Trash2, X, ArrowLeft, Search, Filter, User, BookOpen, Plus, DollarSign, CreditCard, Users, Loader2, ChevronLeft, ChevronRight, Zap, SlidersHorizontal } from 'lucide-react';
 import { useCRUD } from '../hooks/useCRUD';
 import { paymentAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
-import { fetchStudents, fetchTeachers, fetchClasses, fetchCenters, paymentMethodOptions, paymentStatusOptions, paymentTypeOptions, currencyOptions } from '../../../utils/dropdownOptions';
+import { fetchStudents, paymentMethodOptions, paymentStatusOptions, paymentTypeOptions } from '../../../utils/dropdownOptions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -121,7 +121,6 @@ const PaymentsPage = () => {
     payment_status: 'Completed',
   });
   const [studentOptions, setStudentOptions] = useState<Array<{ id?: number; label: string; value: string | number }>>([]);
-  const [classOptions, setClassOptions] = useState<Array<{ id?: number; label: string; value: string | number }>>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
 
@@ -166,9 +165,8 @@ const PaymentsPage = () => {
   const loadDropdownOptions = async () => {
     setIsLoadingOptions(true);
     try {
-      const [studs, clss] = await Promise.all([fetchStudents(), fetchClasses()]);
+      const studs = await fetchStudents();
       setStudentOptions(studs);
-      setClassOptions(clss);
     } catch (error) {
       console.error('Error loading dropdown options:', error);
     } finally {

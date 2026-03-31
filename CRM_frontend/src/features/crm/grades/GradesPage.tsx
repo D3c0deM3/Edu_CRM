@@ -144,7 +144,6 @@ const GradesPage = () => {
   const [studentMarks, setStudentMarks] = useState<Record<number, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
-  const [loadingSubjects, setLoadingSubjects] = useState(false);
 
   // --- HISTORY STATE ---
   const [activeTab, setActiveTab] = useState<TabType>('students');

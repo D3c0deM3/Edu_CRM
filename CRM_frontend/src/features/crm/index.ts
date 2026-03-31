@@ -8,14 +8,14 @@ export * from './rbac';
 
 // Feature modules (existing ones)
 export * from './students';
-export * from './teachers';
-export * from './classes';
-export * from './payments';
-export * from './grades';
-export * from './attendance';
-export * from './assignments';
-export * from './subjects';
-export * from './centers';
-export * from './debts';
-export * from './tests';
-export * from './dashboard';
+export { default as TeachersPage } from './teachers/TeachersPage';
+export { default as ClassesPage } from './classes/ClassesPage';
+export { default as PaymentsPage } from './payments/PaymentsPage';
+export { default as GradesPage } from './grades/GradesPage';
+export { default as AttendancePage } from './attendance/AttendancePage';
+export { default as AssignmentsPage } from './assignments/AssignmentsPage';
+export { default as SubjectsPage } from './subjects/SubjectsPage';
+export { default as CentersPage } from './centers/CentersPage';
+export { default as DebtsPage } from './debts/DebtsPage';
+export { default as TestsPage } from './tests/TestsPage';
+export { default as Dashboard } from './dashboard/Dashboard';

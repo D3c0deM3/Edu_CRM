@@ -564,8 +564,8 @@ const AssignmentsPage = () => {
                 label="Class (Optional - leave empty for personal task)"
                 name="class_id"
                 value={formData.class_id || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, class_id: e.target.value ? Number(e.target.value) : undefined })
+                onChange={(value) =>
+                  setFormData({ ...formData, class_id: value ? Number(value) : undefined })
                 }
                 options={classOptions}
                 isLoading={isLoadingOptions}

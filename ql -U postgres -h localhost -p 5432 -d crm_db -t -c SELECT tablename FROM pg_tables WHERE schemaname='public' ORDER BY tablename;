@@ -1,0 +1,24 @@
+                   List of tables
+ Schema |          Name          | Type  |  Owner   
+--------+------------------------+-------+----------
+ public | assignment_submissions | table | postgres
+ public | assignments            | table | postgres
+ public | attendance             | table | postgres
+ public | classes                | table | postgres
+ public | debts                  | table | postgres
+ public | edu_centers            | table | postgres
+ public | grades                 | table | postgres
+ public | payments               | table | postgres
+ public | reading_passages       | table | postgres
+ public | students               | table | postgres
+ public | subjects               | table | postgres
+ public | superusers             | table | postgres
+ public | teachers               | table | postgres
+ public | test_answers           | table | postgres
+ public | test_assignments       | table | postgres
+ public | test_questions         | table | postgres
+ public | test_results_summary   | table | postgres
+ public | test_submissions       | table | postgres
+ public | tests                  | table | postgres
+(19 rows)
+

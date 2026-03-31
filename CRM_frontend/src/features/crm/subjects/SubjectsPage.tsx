@@ -227,8 +227,8 @@ const SubjectsPage = () => {
                 label="Class"
                 name="class_id"
                 value={formData.class_id || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, class_id: Number(e.target.value) })
+                onChange={(value) =>
+                  setFormData({ ...formData, class_id: Number(value) })
                 }
                 options={classOptions}
                 isLoading={isLoadingOptions}
@@ -239,8 +239,8 @@ const SubjectsPage = () => {
                 label="Teacher"
                 name="teacher_id"
                 value={formData.teacher_id || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, teacher_id: e.target.value ? Number(e.target.value) : undefined })
+                onChange={(value) =>
+                  setFormData({ ...formData, teacher_id: value ? Number(value) : undefined })
                 }
                 options={teacherOptions}
                 isLoading={isLoadingOptions}

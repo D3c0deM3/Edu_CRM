@@ -9,7 +9,6 @@ import {
   ClipboardList,
   FileQuestion,
   TrendingUp,
-  TrendingDown,
   ArrowRight,
   Loader2,
   Star,

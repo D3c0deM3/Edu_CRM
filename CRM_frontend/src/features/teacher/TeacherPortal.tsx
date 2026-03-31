@@ -9,7 +9,6 @@ import {
   Plus,
   Bell,
   Clock,
-  TrendingUp,
   Loader2,
   BookOpen,
   ArrowRight,

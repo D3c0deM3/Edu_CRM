@@ -14,7 +14,11 @@ const Dialog = ({ open, onOpenChange, children }: { open: boolean; onOpenChange?
   return <DialogContext.Provider value={{ open, onOpenChange }}>{children}</DialogContext.Provider>;
 };
 
-const DialogTrigger = ({ children }: { children: React.ReactElement }) => {
+type DialogActionChildProps = {
+  onClick?: React.MouseEventHandler;
+};
+
+const DialogTrigger = ({ children }: { children: React.ReactElement<DialogActionChildProps> }) => {
   const ctx = React.useContext(DialogContext);
   return React.cloneElement(children, {
     onClick: (e: React.MouseEvent) => {
@@ -24,7 +28,7 @@ const DialogTrigger = ({ children }: { children: React.ReactElement }) => {
   });
 };
 
-const DialogClose = ({ children }: { children: React.ReactElement }) => {
+const DialogClose = ({ children }: { children: React.ReactElement<DialogActionChildProps> }) => {
   const ctx = React.useContext(DialogContext);
   return React.cloneElement(children, {
     onClick: (e: React.MouseEvent) => {

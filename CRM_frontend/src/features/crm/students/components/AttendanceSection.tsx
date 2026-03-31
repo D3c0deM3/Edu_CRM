@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { useMemo } from 'react';
-import { Pencil, Trash2, Plus, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Pencil, Trash2, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
