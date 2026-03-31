@@ -1,7 +1,12 @@
 import axios from 'axios';
 import { showToast, handleApiError } from '../../utils/toast';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const configuredApiOrigin = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+const defaultApiOrigin = import.meta.env.PROD
+  ? 'https://guarded-fortress-75118-0236acf5cd86.herokuapp.com'
+  : 'http://localhost:3000';
+const apiOrigin = configuredApiOrigin || defaultApiOrigin;
+const API_BASE_URL = apiOrigin.endsWith('/api') ? apiOrigin : `${apiOrigin}/api`;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
