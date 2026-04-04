@@ -20,6 +20,7 @@ CREATE TABLE students (
     parent_telegram_chat_id BIGINT,
     parent_telegram_verified_at TIMESTAMP,
     parent_telegram_last_login_at TIMESTAMP,
+    parent_telegram_language VARCHAR(5) DEFAULT 'uz',
     gender student_gender,
     status student_status DEFAULT 'Active',
     teacher_id INT,

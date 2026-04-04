@@ -16,11 +16,13 @@ let botStarted = false;
 let pollingTimeout: NodeJS.Timeout | null = null;
 let paymentReminderInterval: NodeJS.Timeout | null = null;
 
+type ParentLanguage = 'uz' | 'ru';
 type PendingStep = 'await_phone' | 'await_password';
 
 interface PendingLoginState {
   step: PendingStep;
   parentPhone?: string;
+  language?: ParentLanguage;
 }
 
 interface ParentChildRecord {
@@ -36,6 +38,7 @@ interface ParentChildRecord {
   parent_name?: string | null;
   parent_phone?: string | null;
   parent_telegram_chat_id?: string | number | null;
+  parent_telegram_language?: ParentLanguage | string | null;
   payment_amount?: string | number | null;
   payment_frequency?: string | null;
 }
@@ -46,6 +49,7 @@ interface ParentSession {
   studentIds: number[];
   activeStudentId: number;
   centerId: number;
+  language: ParentLanguage;
 }
 
 interface PaymentCycle {
@@ -57,6 +61,7 @@ interface PaymentCycle {
 
 const pendingLogins = new Map<number, PendingLoginState>();
 const parentSessions = new Map<number, ParentSession>();
+const parentLanguagePreferences = new Map<number, ParentLanguage>();
 
 const roundMoney = (value: number): number =>
   Math.round((value + Number.EPSILON) * 100) / 100;
@@ -94,8 +99,240 @@ const hashParentPassword = (password: string) =>
 
 const normalizePhone = (value: string): string => value.replace(/[^\d]/g, '');
 
-const formatTashkentDateTime = (value: string | Date): string =>
-  new Date(value).toLocaleString('en-GB', {
+const normalizeLanguage = (value: unknown): ParentLanguage =>
+  value === 'ru' ? 'ru' : 'uz';
+
+const BOT_TEXT = {
+  uz: {
+    buttons: {
+      sharePhone: 'Telefon raqamini yuborish',
+      typePhone: "Telefon raqamini yozish",
+      summary: "Farzand ma'lumoti",
+      children: 'Farzandlarim',
+      attendance: 'Davomat',
+      grades: 'Baholar',
+      payments: "To'lovlar",
+      help: 'Yordam',
+      language: "Tilni o'zgartirish",
+      logout: 'Chiqish',
+    },
+    languageNames: {
+      uz: "O'zbekcha",
+      ru: 'Русский',
+    },
+    activeSuffix: '(Tanlangan)',
+    chooseLanguage: 'Bot tilini tanlang:',
+    languageChanged: "Bot tili o'zgartirildi.",
+    loginPrompt:
+      "Ota-ona botiga xush kelibsiz.\n\nFarzandingiz uchun saqlangan ota-ona telefon raqamini yuboring yoki yozing, keyin ota-ona parolini kiriting.",
+    typePhonePrompt: "Talaba uchun saqlangan ota-ona telefon raqamini yozing.",
+    phoneReceived: 'Telefon raqami olindi. Endi ota-ona parolini kiriting.',
+    passwordPrompt: 'Endi ota-ona parolini kiriting.',
+    loginFailed:
+      "Kirish amalga oshmadi. Telefon raqami va parolni tekshirib, qayta urinib ko'ring.",
+    loginSuccess: "Ota-ona muvaffaqiyatli kirdi.\n\nUlangan farzandlar: {children}",
+    noLinkedChildren: 'Bu Telegram akkauntiga ulangan farzandlar topilmadi.',
+    selectChild: 'Farzandni tanlang:',
+    noClassAssigned: 'Sinf biriktirilmagan',
+    summaryUnavailable: "Farzand ma'lumoti hozircha mavjud emas.",
+    attendanceUnavailable: "Davomat yozuvlari hali qo'shilmagan.",
+    gradesUnavailable: "Baholar hali kiritilmagan.",
+    paymentUnavailable: "To'lov ma'lumoti hozircha mavjud emas.",
+    recentAttendance: 'So‘nggi davomat:',
+    recentGrades: 'So‘nggi baholar:',
+    paymentSummary: '{name} uchun to‘lov ma’lumoti',
+    enrollment: 'Ro‘yxat raqami',
+    class: 'Sinf',
+    attendanceSummary: 'Davomat',
+    present: 'Keldi',
+    absent: 'Kelmadi',
+    late: 'Kechikdi',
+    averageGrade: "O'rtacha baho",
+    gradeItems: '{count} ta baho',
+    totalPaid: "Jami to'langan",
+    currentDebt: 'Joriy qarzdorlik',
+    nextDueDate: 'Keyingi to‘lov sanasi',
+    noNextDueDate: "Keyingi to'lov topilmadi",
+    noUnpaidCycle: "To'lanmagan oylik davr topilmadi",
+    completedPayments: "So'nggi to'langan to'lovlar:",
+    helpText:
+      "Pastdagi tugmalar orqali farzandingiz ma'lumoti, davomat, baholar va to'lovlarni ko'ring yoki farzand almashtiring.",
+    unknownCommand:
+      "Davom etish uchun pastdagi menyudan birini tanlang yoki farzandni almashtirish uchun 'Farzandlarim' tugmasini bosing.",
+    loginFirst: 'Avval tizimga kiring.',
+    childNotLinked: 'Bu farzand ushbu akkauntga ulangan emas.',
+    activeChildUpdated: 'Tanlangan farzand yangilandi.',
+    activeChildSet: 'Tanlangan farzand: {name}.\n\n{summary}',
+    attendanceUpdate: '{name} uchun davomat yangilandi',
+    status: 'Holat',
+    markedAt: 'Belgilangan vaqt',
+    teacher: "O'qituvchi",
+    notes: 'Izoh',
+    newGrade: '{name} uchun yangi baho qo‘yildi',
+    gradeUpdated: '{name} uchun baho yangilandi',
+    subject: 'Fan',
+    score: 'Natija',
+    grade: 'Baho',
+    term: 'Chorak',
+    publishedAt: 'Kiritilgan vaqt',
+    paymentReminder: '{name} uchun oylik to‘lov eslatmasi',
+    dueDate: 'To‘lov sanasi',
+    amountDue: 'To‘lanishi kerak',
+    reminderInfo:
+      "Bu eslatma to‘lov sanasidan {days} kun oldin yuborildi.",
+  },
+  ru: {
+    buttons: {
+      sharePhone: 'Отправить номер телефона',
+      typePhone: 'Ввести номер телефона',
+      summary: 'Сводка по ребенку',
+      children: 'Мои дети',
+      attendance: 'Посещаемость',
+      grades: 'Оценки',
+      payments: 'Платежи',
+      help: 'Помощь',
+      language: 'Сменить язык',
+      logout: 'Выйти',
+    },
+    languageNames: {
+      uz: "O'zbekcha",
+      ru: 'Русский',
+    },
+    activeSuffix: '(Активный)',
+    chooseLanguage: 'Выберите язык бота:',
+    languageChanged: 'Язык бота изменен.',
+    loginPrompt:
+      "Добро пожаловать в бот для родителей.\n\nОтправьте или введите номер телефона родителя, сохраненный для вашего ребенка, затем введите пароль родителя.",
+    typePhonePrompt: 'Введите номер телефона родителя, сохраненный для ученика.',
+    phoneReceived: 'Номер телефона получен. Теперь введите пароль родителя.',
+    passwordPrompt: 'Теперь введите пароль родителя.',
+    loginFailed:
+      'Не удалось войти. Проверьте номер телефона и пароль и попробуйте снова.',
+    loginSuccess: 'Вход для родителя выполнен.\n\nСвязанные дети: {children}',
+    noLinkedChildren: 'Для этого Telegram-чата не найдено связанных детей.',
+    selectChild: 'Выберите ребенка:',
+    noClassAssigned: 'Класс не назначен',
+    summaryUnavailable: 'Сводка по ребенку сейчас недоступна.',
+    attendanceUnavailable: 'Записей посещаемости пока нет.',
+    gradesUnavailable: 'Оценки пока не опубликованы.',
+    paymentUnavailable: 'Информация по платежам сейчас недоступна.',
+    recentAttendance: 'Последняя посещаемость:',
+    recentGrades: 'Последние оценки:',
+    paymentSummary: 'Информация по платежам для {name}',
+    enrollment: 'Номер зачисления',
+    class: 'Класс',
+    attendanceSummary: 'Посещаемость',
+    present: 'Присутствовал',
+    absent: 'Отсутствовал',
+    late: 'Опоздал',
+    averageGrade: 'Средняя оценка',
+    gradeItems: '{count} оценок',
+    totalPaid: 'Всего оплачено',
+    currentDebt: 'Текущий долг',
+    nextDueDate: 'Следующая дата оплаты',
+    noNextDueDate: 'Следующей оплаты нет',
+    noUnpaidCycle: 'Не найден неоплаченный ежемесячный период',
+    completedPayments: 'Последние оплаченные платежи:',
+    helpText:
+      'Используйте кнопки ниже, чтобы смотреть сводку по ребенку, посещаемость, оценки, платежи или переключаться между детьми.',
+    unknownCommand:
+      "Выберите одну из кнопок меню ниже или нажмите 'Мои дети', чтобы переключаться между детьми.",
+    loginFirst: 'Сначала войдите в систему.',
+    childNotLinked: 'Этот ребенок не связан с данным аккаунтом.',
+    activeChildUpdated: 'Активный ребенок обновлен.',
+    activeChildSet: 'Активный ребенок: {name}.\n\n{summary}',
+    attendanceUpdate: 'Обновление посещаемости для {name}',
+    status: 'Статус',
+    markedAt: 'Отмечено в',
+    teacher: 'Учитель',
+    notes: 'Примечание',
+    newGrade: 'Добавлена новая оценка для {name}',
+    gradeUpdated: 'Оценка обновлена для {name}',
+    subject: 'Предмет',
+    score: 'Результат',
+    grade: 'Оценка',
+    term: 'Четверть',
+    publishedAt: 'Опубликовано в',
+    paymentReminder: 'Напоминание об оплате для {name}',
+    dueDate: 'Дата оплаты',
+    amountDue: 'К оплате',
+    reminderInfo:
+      'Это напоминание отправлено за {days} дн. до даты оплаты.',
+  },
+} as const;
+
+const BUTTON_FALLBACKS: Record<string, string[]> = {
+  typePhone: ['Type Phone Number', 'Login to Parent Bot'],
+  summary: ['Child Summary'],
+  children: ['My Children'],
+  attendance: ['Attendance'],
+  grades: ['Grades'],
+  payments: ['Payments'],
+  help: ['Help'],
+  language: ['Change Language'],
+  logout: ['Logout'],
+};
+
+const interpolate = (template: string, values: Record<string, string | number>) =>
+  Object.entries(values).reduce(
+    (result, [key, value]) => result.split(`{${key}}`).join(String(value)),
+    template
+  );
+
+const getTextSet = (language: ParentLanguage) => BOT_TEXT[language];
+
+const getButtonText = (language: ParentLanguage, key: keyof typeof BOT_TEXT.uz.buttons) =>
+  BOT_TEXT[language].buttons[key];
+
+const matchesButton = (text: string, key: keyof typeof BOT_TEXT.uz.buttons): boolean => {
+  if (!text) {
+    return false;
+  }
+
+  const candidates = new Set<string>([
+    BOT_TEXT.uz.buttons[key],
+    BOT_TEXT.ru.buttons[key],
+    ...(BUTTON_FALLBACKS[key] || []),
+  ]);
+
+  return candidates.has(text);
+};
+
+const getChatLanguage = (chatId: number, session?: ParentSession | null): ParentLanguage => {
+  if (session?.language) {
+    return session.language;
+  }
+
+  if (parentSessions.has(chatId)) {
+    return parentSessions.get(chatId)?.language || 'uz';
+  }
+
+  if (pendingLogins.has(chatId)) {
+    return normalizeLanguage(pendingLogins.get(chatId)?.language);
+  }
+
+  return normalizeLanguage(parentLanguagePreferences.get(chatId));
+};
+
+const setLocalLanguagePreference = (chatId: number, language: ParentLanguage) => {
+  parentLanguagePreferences.set(chatId, language);
+
+  const pendingState = pendingLogins.get(chatId);
+  if (pendingState) {
+    pendingLogins.set(chatId, { ...pendingState, language });
+  }
+
+  const session = parentSessions.get(chatId);
+  if (session) {
+    session.language = language;
+  }
+};
+
+const formatTashkentDateTime = (
+  value: string | Date,
+  language: ParentLanguage = 'uz'
+): string =>
+  new Date(value).toLocaleString(language === 'ru' ? 'ru-RU' : 'uz-UZ', {
     timeZone: 'Asia/Tashkent',
     year: 'numeric',
     month: 'short',
@@ -112,29 +349,69 @@ const buildReplyKeyboard = (rows: Array<Array<string | { text: string; request_c
   one_time_keyboard: false,
 });
 
-const AUTH_KEYBOARD = buildReplyKeyboard([
-  [{ text: 'Share Phone Number', request_contact: true }],
-  ['Type Phone Number'],
-]);
+const getAuthKeyboard = (language: ParentLanguage) =>
+  buildReplyKeyboard([
+    [{ text: getButtonText(language, 'sharePhone'), request_contact: true }],
+    [getButtonText(language, 'typePhone')],
+    [getButtonText(language, 'language')],
+  ]);
 
-const MAIN_MENU_KEYBOARD = buildReplyKeyboard([
-  ['Child Summary', 'My Children'],
-  ['Attendance', 'Grades'],
-  ['Payments', 'Help'],
-  ['Logout'],
-]);
+const getMainMenuKeyboard = (language: ParentLanguage) =>
+  buildReplyKeyboard([
+    [getButtonText(language, 'summary'), getButtonText(language, 'children')],
+    [getButtonText(language, 'attendance'), getButtonText(language, 'grades')],
+    [getButtonText(language, 'payments'), getButtonText(language, 'help')],
+    [getButtonText(language, 'language'), getButtonText(language, 'logout')],
+  ]);
 
-const buildChildrenInlineKeyboard = (children: ParentChildRecord[], activeStudentId?: number) => ({
+const buildChildrenInlineKeyboard = (
+  children: ParentChildRecord[],
+  language: ParentLanguage,
+  activeStudentId?: number
+) => ({
   inline_keyboard: children.map((child) => [
     {
       text:
         Number(child.student_id) === Number(activeStudentId)
-          ? `${child.first_name} ${child.last_name} (Active)`
+          ? `${child.first_name} ${child.last_name} ${getTextSet(language).activeSuffix}`
           : `${child.first_name} ${child.last_name}`,
       callback_data: `child:${child.student_id}`,
     },
   ]),
 });
+
+const buildLanguageInlineKeyboard = (language: ParentLanguage) => ({
+  inline_keyboard: [[
+    {
+      text:
+        language === 'uz'
+          ? `• ${BOT_TEXT.uz.languageNames.uz}`
+          : BOT_TEXT.uz.languageNames.uz,
+      callback_data: 'lang:uz',
+    },
+    {
+      text:
+        language === 'ru'
+          ? `• ${BOT_TEXT.ru.languageNames.ru}`
+          : BOT_TEXT.ru.languageNames.ru,
+      callback_data: 'lang:ru',
+    },
+  ]],
+});
+
+const translateAttendanceStatus = (status: string, language: ParentLanguage): string => {
+  const text = getTextSet(language);
+  switch ((status || '').toLowerCase()) {
+    case 'present':
+      return text.present;
+    case 'absent':
+      return text.absent;
+    case 'late':
+      return text.late;
+    default:
+      return status;
+  }
+};
 
 const sendTelegramRequest = async (method: string, payload: Record<string, any>) => {
   if (!TELEGRAM_API_BASE) {
@@ -194,6 +471,10 @@ const ensureParentBotSchema = async (): Promise<void> => {
         ADD COLUMN IF NOT EXISTS parent_telegram_last_login_at TIMESTAMP
       `);
       await botDb.query(`
+        ALTER TABLE students
+        ADD COLUMN IF NOT EXISTS parent_telegram_language VARCHAR(5) DEFAULT 'uz'
+      `);
+      await botDb.query(`
         ALTER TABLE edu_centers
         ADD COLUMN IF NOT EXISTS parent_payment_warning_days INT DEFAULT ${DEFAULT_PARENT_PAYMENT_WARNING_DAYS}
       `);
@@ -243,6 +524,7 @@ const loadChildrenByPhoneAndPassword = async (
         s.parent_name,
         s.parent_phone,
         s.parent_telegram_chat_id,
+        s.parent_telegram_language,
         c.class_name,
         c.class_code,
         c.payment_amount,
@@ -274,6 +556,7 @@ const loadChildrenByChatId = async (chatId: number): Promise<ParentChildRecord[]
         s.parent_name,
         s.parent_phone,
         s.parent_telegram_chat_id,
+        s.parent_telegram_language,
         c.class_name,
         c.class_code,
         c.payment_amount,
@@ -294,14 +577,19 @@ const createSession = (chatId: number, children: ParentChildRecord[]): ParentSes
     return null;
   }
 
+  const preferredLanguage = normalizeLanguage(
+    children[0].parent_telegram_language || parentLanguagePreferences.get(chatId)
+  );
   const session: ParentSession = {
     chatId,
     parentPhone: children[0].parent_phone || '',
     centerId: children[0].center_id,
     studentIds: children.map((child) => child.student_id),
     activeStudentId: children[0].student_id,
+    language: preferredLanguage,
   };
 
+  parentLanguagePreferences.set(chatId, preferredLanguage);
   parentSessions.set(chatId, session);
   return session;
 };
@@ -316,7 +604,11 @@ const ensureSessionForChat = async (chatId: number): Promise<ParentSession | nul
   return createSession(chatId, children);
 };
 
-const linkParentChat = async (chatId: number, children: ParentChildRecord[]) => {
+const linkParentChat = async (
+  chatId: number,
+  children: ParentChildRecord[],
+  language: ParentLanguage
+) => {
   if (children.length === 0) {
     return;
   }
@@ -327,11 +619,27 @@ const linkParentChat = async (chatId: number, children: ParentChildRecord[]) => 
       SET
         parent_telegram_chat_id = $1,
         parent_telegram_verified_at = CURRENT_TIMESTAMP,
-        parent_telegram_last_login_at = CURRENT_TIMESTAMP
+        parent_telegram_last_login_at = CURRENT_TIMESTAMP,
+        parent_telegram_language = $3
       WHERE student_id = ANY($2::int[])
     `,
-    [chatId, children.map((child) => child.student_id)]
+    [chatId, children.map((child) => child.student_id), language]
   );
+
+  parentLanguagePreferences.set(chatId, language);
+};
+
+const updateParentLanguageForChat = async (chatId: number, language: ParentLanguage) => {
+  await ensureParentBotSchema();
+  await botDb.query(
+    `
+      UPDATE students
+      SET parent_telegram_language = $2
+      WHERE parent_telegram_chat_id = $1
+    `,
+    [chatId, language]
+  );
+  setLocalLanguagePreference(chatId, language);
 };
 
 const getChildById = async (studentId: number): Promise<ParentChildRecord | null> => {
@@ -349,6 +657,7 @@ const getChildById = async (studentId: number): Promise<ParentChildRecord | null
         s.parent_name,
         s.parent_phone,
         s.parent_telegram_chat_id,
+        s.parent_telegram_language,
         c.class_name,
         c.class_code,
         c.payment_amount,
@@ -494,7 +803,10 @@ const getStudentPaymentSnapshot = async (studentId: number) => {
   };
 };
 
-const getChildSummaryText = async (studentId: number): Promise<string> => {
+const getChildSummaryText = async (
+  studentId: number,
+  language: ParentLanguage
+): Promise<string> => {
   const [studentResult, attendanceResult, gradeResult] = await Promise.all([
     botDb.query(
       `
@@ -538,29 +850,34 @@ const getChildSummaryText = async (studentId: number): Promise<string> => {
 
   const student = studentResult.rows[0];
   if (!student) {
-    return 'Child summary is currently unavailable.';
+    return getTextSet(language).summaryUnavailable;
   }
 
+  const text = getTextSet(language);
   const paymentSnapshot = await getStudentPaymentSnapshot(studentId);
   const attendance = attendanceResult.rows[0] || {};
   const grades = gradeResult.rows[0] || {};
+  const studentName = `${student.first_name} ${student.last_name}`;
 
   return [
-    `${student.first_name} ${student.last_name}`,
-    `Enrollment: ${student.enrollment_number}`,
-    `Class: ${student.class_name || 'Not assigned yet'}`,
+    studentName,
+    `${text.enrollment}: ${student.enrollment_number}`,
+    `${text.class}: ${student.class_name || text.noClassAssigned}`,
     '',
-    `Attendance: Present ${attendance.present_count || 0}, Absent ${attendance.absent_count || 0}, Late ${attendance.late_count || 0}`,
-    `Average grade: ${roundMoney(toNumber(grades.average_percentage))}% across ${grades.grade_count || 0} grade item(s)`,
-    `Total paid: $${(paymentSnapshot?.totalPaid || 0).toFixed(2)}`,
-    `Current debt: $${(paymentSnapshot?.currentDebt || 0).toFixed(2)}`,
+    `${text.attendanceSummary}: ${text.present} ${attendance.present_count || 0}, ${text.absent} ${attendance.absent_count || 0}, ${text.late} ${attendance.late_count || 0}`,
+    `${text.averageGrade}: ${roundMoney(toNumber(grades.average_percentage))}% (${interpolate(text.gradeItems, { count: grades.grade_count || 0 })})`,
+    `${text.totalPaid}: $${(paymentSnapshot?.totalPaid || 0).toFixed(2)}`,
+    `${text.currentDebt}: $${(paymentSnapshot?.currentDebt || 0).toFixed(2)}`,
     paymentSnapshot?.nextDueDate
-      ? `Next payment due: ${paymentSnapshot.nextDueDate} ($${paymentSnapshot.nextDueBalance.toFixed(2)})`
-      : 'Next payment due: no unpaid monthly cycle found',
+      ? `${text.nextDueDate}: ${paymentSnapshot.nextDueDate} ($${paymentSnapshot.nextDueBalance.toFixed(2)})`
+      : `${text.nextDueDate}: ${text.noUnpaidCycle}`,
   ].join('\n');
 };
 
-const getAttendanceText = async (studentId: number): Promise<string> => {
+const getAttendanceText = async (
+  studentId: number,
+  language: ParentLanguage
+): Promise<string> => {
   const result = await botDb.query(
     `
       SELECT attendance_date, status, remarks, created_at
@@ -573,20 +890,24 @@ const getAttendanceText = async (studentId: number): Promise<string> => {
   );
 
   if (result.rows.length === 0) {
-    return 'No attendance records have been added yet.';
+    return getTextSet(language).attendanceUnavailable;
   }
 
-  const lines = ['Recent attendance:'];
+  const text = getTextSet(language);
+  const lines: string[] = [text.recentAttendance];
   result.rows.forEach((record: any) => {
     lines.push(
-      `${record.attendance_date}: ${record.status}${record.remarks ? ` (${record.remarks})` : ''}`
+      `${record.attendance_date}: ${translateAttendanceStatus(record.status, language)}${record.remarks ? ` (${record.remarks})` : ''}`
     );
   });
 
   return lines.join('\n');
 };
 
-const getGradesText = async (studentId: number): Promise<string> => {
+const getGradesText = async (
+  studentId: number,
+  language: ParentLanguage
+): Promise<string> => {
   const result = await botDb.query(
     `
       SELECT subject, marks_obtained, total_marks, percentage, grade_letter, term, created_at
@@ -599,39 +920,46 @@ const getGradesText = async (studentId: number): Promise<string> => {
   );
 
   if (result.rows.length === 0) {
-    return 'No grades have been published yet.';
+    return getTextSet(language).gradesUnavailable;
   }
 
-  const lines = ['Recent grades:'];
+  const text = getTextSet(language);
+  const lines: string[] = [text.recentGrades];
   result.rows.forEach((grade: any) => {
     lines.push(
-      `${grade.subject || 'Subject'}: ${grade.marks_obtained}/${grade.total_marks} (${roundMoney(
+      `${grade.subject || text.subject}: ${grade.marks_obtained}/${grade.total_marks} (${roundMoney(
         toNumber(grade.percentage)
-      )}%) ${grade.grade_letter ? `Grade ${grade.grade_letter}` : ''}`
+      )}%) ${grade.grade_letter ? `${text.grade} ${grade.grade_letter}` : ''}`
     );
   });
 
   return lines.join('\n');
 };
 
-const getPaymentsText = async (studentId: number): Promise<string> => {
+const getPaymentsText = async (
+  studentId: number,
+  language: ParentLanguage
+): Promise<string> => {
   const paymentSnapshot = await getStudentPaymentSnapshot(studentId);
   if (!paymentSnapshot) {
-    return 'Payment summary is currently unavailable.';
+    return getTextSet(language).paymentUnavailable;
   }
 
+  const text = getTextSet(language);
   const recentPayments = paymentSnapshot.payments.slice(-5).reverse();
   const lines = [
-    `Payment summary for ${paymentSnapshot.student.first_name} ${paymentSnapshot.student.last_name}`,
-    `Total paid: $${paymentSnapshot.totalPaid.toFixed(2)}`,
-    `Current debt: $${paymentSnapshot.currentDebt.toFixed(2)}`,
+    interpolate(text.paymentSummary, {
+      name: `${paymentSnapshot.student.first_name} ${paymentSnapshot.student.last_name}`,
+    }),
+    `${text.totalPaid}: $${paymentSnapshot.totalPaid.toFixed(2)}`,
+    `${text.currentDebt}: $${paymentSnapshot.currentDebt.toFixed(2)}`,
     paymentSnapshot.nextDueDate
-      ? `Next due date: ${paymentSnapshot.nextDueDate} ($${paymentSnapshot.nextDueBalance.toFixed(2)})`
-      : 'Next due date: none',
+      ? `${text.nextDueDate}: ${paymentSnapshot.nextDueDate} ($${paymentSnapshot.nextDueBalance.toFixed(2)})`
+      : `${text.nextDueDate}: ${text.noNextDueDate}`,
   ];
 
   if (recentPayments.length > 0) {
-    lines.push('', 'Recent completed payments:');
+    lines.push('', text.completedPayments);
     recentPayments.forEach((payment: any) => {
       lines.push(`${payment.payment_date}: $${roundMoney(toNumber(payment.amount)).toFixed(2)}`);
     });
@@ -640,34 +968,45 @@ const getPaymentsText = async (studentId: number): Promise<string> => {
   return lines.join('\n');
 };
 
-const withMainMenu = async (chatId: number, text: string, extra: Record<string, any> = {}) =>
+const withMainMenu = async (
+  chatId: number,
+  text: string,
+  language: ParentLanguage,
+  extra: Record<string, any> = {}
+) =>
   sendTelegramMessage(chatId, text, {
-    reply_markup: MAIN_MENU_KEYBOARD,
+    reply_markup: getMainMenuKeyboard(language),
     ...extra,
   });
 
-const sendLoginPrompt = async (chatId: number) =>
+const sendLoginPrompt = async (chatId: number, language: ParentLanguage) =>
   sendTelegramMessage(
     chatId,
-    'Welcome to the parent portal bot.\n\nPlease share or type the parent phone number saved for your child, then enter the parent password.',
-    { reply_markup: AUTH_KEYBOARD }
+    getTextSet(language).loginPrompt,
+    { reply_markup: getAuthKeyboard(language) }
   );
+
+const sendLanguageSelector = async (chatId: number, language: ParentLanguage) =>
+  sendTelegramMessage(chatId, getTextSet(language).chooseLanguage, {
+    reply_markup: buildLanguageInlineKeyboard(language),
+  });
 
 const sendChildrenList = async (chatId: number, session: ParentSession) => {
   const children = await loadParentChildrenForSession(session);
   if (children.length === 0) {
-    return withMainMenu(chatId, 'No linked children were found for this Telegram chat.');
+    return withMainMenu(chatId, getTextSet(session.language).noLinkedChildren, session.language);
   }
 
-  const lines = ['Select a child:'];
+  const text = getTextSet(session.language);
+  const lines: string[] = [text.selectChild];
   children.forEach((child) => {
     lines.push(
-      `${child.first_name} ${child.last_name} - ${child.class_name || 'No class assigned'}`
+      `${child.first_name} ${child.last_name} - ${child.class_name || text.noClassAssigned}`
     );
   });
 
-  return withMainMenu(chatId, lines.join('\n'), {
-    reply_markup: buildChildrenInlineKeyboard(children, session.activeStudentId),
+  return sendTelegramMessage(chatId, lines.join('\n'), {
+    reply_markup: buildChildrenInlineKeyboard(children, session.language, session.activeStudentId),
   });
 };
 
@@ -709,6 +1048,7 @@ const sendParentNotification = async (
   eventType: string,
   eventKey: string,
   message: string,
+  language: ParentLanguage,
   payload: Record<string, any> = {}
 ) => {
   await ensureParentBotSchema();
@@ -742,7 +1082,7 @@ const sendParentNotification = async (
   }
 
   await sendTelegramMessage(student.parent_telegram_chat_id, message, {
-    reply_markup: MAIN_MENU_KEYBOARD,
+    reply_markup: getMainMenuKeyboard(language),
   });
 };
 
@@ -763,6 +1103,7 @@ export const notifyParentsAboutAttendance = async (
           a.remarks,
           s.first_name AS student_first_name,
           s.last_name AS student_last_name,
+          s.parent_telegram_language,
           c.class_name,
           c.class_code,
           t.first_name AS teacher_first_name,
@@ -781,18 +1122,22 @@ export const notifyParentsAboutAttendance = async (
       return;
     }
 
-    const exactTime = formatTashkentDateTime(options.exactTimestamp || new Date());
+    const language = normalizeLanguage(record.parent_telegram_language);
+    const text = getTextSet(language);
+    const exactTime = formatTashkentDateTime(options.exactTimestamp || new Date(), language);
     const teacherName =
       record.teacher_first_name && record.teacher_last_name
         ? `${record.teacher_first_name} ${record.teacher_last_name}`
-        : 'Teacher';
+        : text.teacher;
     const message = [
-      `Attendance update for ${record.student_first_name} ${record.student_last_name}`,
-      `Status: ${record.status}`,
-      `Class: ${record.class_name || 'N/A'}`,
-      `Marked at: ${exactTime}`,
-      `Teacher: ${teacherName}`,
-      record.remarks ? `Notes: ${record.remarks}` : '',
+      interpolate(text.attendanceUpdate, {
+        name: `${record.student_first_name} ${record.student_last_name}`,
+      }),
+      `${text.status}: ${translateAttendanceStatus(record.status, language)}`,
+      `${text.class}: ${record.class_name || text.noClassAssigned}`,
+      `${text.markedAt}: ${exactTime}`,
+      `${text.teacher}: ${teacherName}`,
+      record.remarks ? `${text.notes}: ${record.remarks}` : '',
     ]
       .filter(Boolean)
       .join('\n');
@@ -802,6 +1147,7 @@ export const notifyParentsAboutAttendance = async (
       'attendance',
       options.eventKey || `attendance:${record.attendance_id}:${record.status}:${record.attendance_date}:${record.remarks || ''}`,
       message,
+      language,
       {
         attendance_id: record.attendance_id,
         status: record.status,
@@ -836,6 +1182,7 @@ export const notifyParentsAboutGrade = async (
           g.updated_at,
           s.first_name AS student_first_name,
           s.last_name AS student_last_name,
+          s.parent_telegram_language,
           t.first_name AS teacher_first_name,
           t.last_name AS teacher_last_name
         FROM grades g
@@ -851,18 +1198,22 @@ export const notifyParentsAboutGrade = async (
       return;
     }
 
+    const language = normalizeLanguage(record.parent_telegram_language);
+    const text = getTextSet(language);
     const teacherName =
       record.teacher_first_name && record.teacher_last_name
         ? `${record.teacher_first_name} ${record.teacher_last_name}`
-        : 'Teacher';
+        : text.teacher;
     const message = [
-      `${options.mode === 'update' ? 'Grade updated' : 'New grade posted'} for ${record.student_first_name} ${record.student_last_name}`,
-      `Subject: ${record.subject || 'Subject'}`,
-      `Score: ${record.marks_obtained}/${record.total_marks} (${roundMoney(toNumber(record.percentage))}%)`,
-      record.grade_letter ? `Grade: ${record.grade_letter}` : '',
-      record.term ? `Term: ${record.term}` : '',
-      `Published at: ${formatTashkentDateTime(record.updated_at || record.created_at)}`,
-      `Teacher: ${teacherName}`,
+      interpolate(options.mode === 'update' ? text.gradeUpdated : text.newGrade, {
+        name: `${record.student_first_name} ${record.student_last_name}`,
+      }),
+      `${text.subject}: ${record.subject || text.subject}`,
+      `${text.score}: ${record.marks_obtained}/${record.total_marks} (${roundMoney(toNumber(record.percentage))}%)`,
+      record.grade_letter ? `${text.grade}: ${record.grade_letter}` : '',
+      record.term ? `${text.term}: ${record.term}` : '',
+      `${text.publishedAt}: ${formatTashkentDateTime(record.updated_at || record.created_at, language)}`,
+      `${text.teacher}: ${teacherName}`,
     ]
       .filter(Boolean)
       .join('\n');
@@ -873,6 +1224,7 @@ export const notifyParentsAboutGrade = async (
       options.eventKey ||
         `grade:${record.grade_id}:${options.mode || 'create'}:${record.updated_at || record.created_at}`,
       message,
+      language,
       {
         grade_id: record.grade_id,
         mode: options.mode || 'create',
@@ -904,6 +1256,7 @@ export const runParentPaymentReminderSweep = async () => {
           s.parent_name,
           s.parent_phone,
           s.parent_telegram_chat_id,
+          s.parent_telegram_language,
           c.class_name,
           c.class_code,
           c.payment_amount,
@@ -957,17 +1310,22 @@ export const runParentPaymentReminderSweep = async () => {
         continue;
       }
 
+      const language = normalizeLanguage(student.parent_telegram_language);
+      const text = getTextSet(language);
       await sendParentNotification(
         student.student_id,
         'payment_reminder',
         `payment-reminder:${student.student_id}:${dueCycle.dueDate}`,
         [
-          `Monthly payment reminder for ${student.first_name} ${student.last_name}`,
-          `Class: ${student.class_name || 'N/A'}`,
-          `Due date: ${dueCycle.dueDate}`,
-          `Amount due: $${dueCycle.balance.toFixed(2)}`,
-          `This reminder was sent ${warningDays} day${warningDays === 1 ? '' : 's'} before the payment date.`,
+          interpolate(text.paymentReminder, {
+            name: `${student.first_name} ${student.last_name}`,
+          }),
+          `${text.class}: ${student.class_name || text.noClassAssigned}`,
+          `${text.dueDate}: ${dueCycle.dueDate}`,
+          `${text.amountDue}: $${dueCycle.balance.toFixed(2)}`,
+          interpolate(text.reminderInfo, { days: warningDays }),
         ].join('\n'),
+        language,
         {
           due_date: dueCycle.dueDate,
           balance: dueCycle.balance,
@@ -980,72 +1338,105 @@ export const runParentPaymentReminderSweep = async () => {
 };
 
 const handleAuthenticatedMessage = async (chatId: number, text: string, session: ParentSession) => {
-  switch (text) {
-    case 'My Children':
+  if (matchesButton(text, 'children')) {
       await sendChildrenList(chatId, session);
       return;
-    case 'Child Summary':
-      await withMainMenu(chatId, await getChildSummaryText(session.activeStudentId));
-      return;
-    case 'Attendance':
-      await withMainMenu(chatId, await getAttendanceText(session.activeStudentId));
-      return;
-    case 'Grades':
-      await withMainMenu(chatId, await getGradesText(session.activeStudentId));
-      return;
-    case 'Payments':
-      await withMainMenu(chatId, await getPaymentsText(session.activeStudentId));
-      return;
-    case 'Help':
+  }
+
+  if (matchesButton(text, 'summary')) {
       await withMainMenu(
         chatId,
-        'Use the keyboard buttons to view your child summary, recent attendance, grades, payments, or to switch between linked children.'
+        await getChildSummaryText(session.activeStudentId, session.language),
+        session.language
       );
       return;
-    case 'Logout':
+  }
+
+  if (matchesButton(text, 'attendance')) {
+      await withMainMenu(
+        chatId,
+        await getAttendanceText(session.activeStudentId, session.language),
+        session.language
+      );
+      return;
+  }
+
+  if (matchesButton(text, 'grades')) {
+      await withMainMenu(
+        chatId,
+        await getGradesText(session.activeStudentId, session.language),
+        session.language
+      );
+      return;
+  }
+
+  if (matchesButton(text, 'payments')) {
+      await withMainMenu(
+        chatId,
+        await getPaymentsText(session.activeStudentId, session.language),
+        session.language
+      );
+      return;
+  }
+
+  if (matchesButton(text, 'help')) {
+      await withMainMenu(chatId, getTextSet(session.language).helpText, session.language);
+      return;
+  }
+
+  if (matchesButton(text, 'language')) {
+      await sendLanguageSelector(chatId, session.language);
+      return;
+  }
+
+  if (matchesButton(text, 'logout')) {
       parentSessions.delete(chatId);
       pendingLogins.delete(chatId);
-      await sendLoginPrompt(chatId);
+      await sendLoginPrompt(chatId, getChatLanguage(chatId));
       return;
-    default:
-      await withMainMenu(
-        chatId,
-        'Choose one of the menu buttons below to continue, or press My Children to switch between linked children.'
-      );
   }
+
+  await withMainMenu(chatId, getTextSet(session.language).unknownCommand, session.language);
 };
 
 const handleLoginMessage = async (message: any) => {
   const chatId = message.chat.id;
   const text = typeof message.text === 'string' ? message.text.trim() : '';
   const pendingState = pendingLogins.get(chatId);
+  const language = getChatLanguage(chatId);
+  const textSet = getTextSet(language);
 
   if (message.contact?.phone_number) {
     const parentPhone = message.contact.phone_number;
-    pendingLogins.set(chatId, { step: 'await_password', parentPhone });
-    await sendTelegramMessage(chatId, 'Phone number received. Now enter the parent password.', {
-      reply_markup: AUTH_KEYBOARD,
+    pendingLogins.set(chatId, { step: 'await_password', parentPhone, language });
+    await sendTelegramMessage(chatId, textSet.phoneReceived, {
+      reply_markup: getAuthKeyboard(language),
     });
     return;
   }
 
-  if (text === '/start' || text === 'Login to Parent Bot' || text === 'Type Phone Number') {
-    pendingLogins.set(chatId, { step: 'await_phone' });
-    await sendTelegramMessage(chatId, 'Please type the parent phone number saved for the student.', {
-      reply_markup: AUTH_KEYBOARD,
+  if (matchesButton(text, 'language')) {
+    await sendLanguageSelector(chatId, language);
+    return;
+  }
+
+  if (text === '/start' || matchesButton(text, 'typePhone')) {
+    pendingLogins.set(chatId, { step: 'await_phone', language });
+    await sendTelegramMessage(chatId, textSet.typePhonePrompt, {
+      reply_markup: getAuthKeyboard(language),
     });
     return;
   }
 
   if (!pendingState || pendingState.step === 'await_phone') {
     if (!text) {
-      await sendLoginPrompt(chatId);
+      await sendLoginPrompt(chatId, language);
       return;
     }
 
-    pendingLogins.set(chatId, { step: 'await_password', parentPhone: text });
-    await sendTelegramMessage(chatId, 'Now enter the parent password.', {
-      reply_markup: AUTH_KEYBOARD,
+    pendingLogins.set(chatId, { step: 'await_password', parentPhone: text, language });
+    await sendTelegramMessage(chatId, textSet.passwordPrompt, {
+      reply_markup: getAuthKeyboard(language),
     });
     return;
   }
@@ -1053,28 +1444,29 @@ const handleLoginMessage = async (message: any) => {
   if (pendingState.step === 'await_password') {
     const children = await loadChildrenByPhoneAndPassword(pendingState.parentPhone || '', text);
     if (children.length === 0) {
-      pendingLogins.set(chatId, { step: 'await_phone' });
+      pendingLogins.set(chatId, { step: 'await_phone', language });
       await sendTelegramMessage(
         chatId,
-        'Parent login failed. Check the phone number and password, then try again.',
-        { reply_markup: AUTH_KEYBOARD }
+        textSet.loginFailed,
+        { reply_markup: getAuthKeyboard(language) }
       );
       return;
     }
 
-    await linkParentChat(chatId, children);
+    await linkParentChat(chatId, children, language);
     pendingLogins.delete(chatId);
     const session = createSession(chatId, children);
     if (!session) {
-      await sendLoginPrompt(chatId);
+      await sendLoginPrompt(chatId, language);
       return;
     }
 
     await withMainMenu(
       chatId,
-      `Parent login successful.\n\nLinked children: ${children
-        .map((child) => `${child.first_name} ${child.last_name}`)
-        .join(', ')}`
+      interpolate(textSet.loginSuccess, {
+        children: children.map((child) => `${child.first_name} ${child.last_name}`).join(', '),
+      }),
+      session.language
     );
     await sendChildrenList(chatId, session);
   }
@@ -1087,28 +1479,57 @@ const handleCallbackQuery = async (callbackQuery: any) => {
     return;
   }
 
+  if (data.startsWith('lang:')) {
+    const language = normalizeLanguage(data.split(':')[1]);
+    const session = await ensureSessionForChat(chatId);
+    await updateParentLanguageForChat(chatId, language);
+    await answerCallbackQuery(callbackQuery.id, getTextSet(language).languageChanged);
+
+    if (session) {
+      session.language = language;
+      await withMainMenu(
+        chatId,
+        `${getTextSet(language).languageChanged}\n\n${await getChildSummaryText(session.activeStudentId, language)}`,
+        language
+      );
+      return;
+    }
+
+    await sendTelegramMessage(
+      chatId,
+      `${getTextSet(language).languageChanged}\n\n${getTextSet(language).loginPrompt}`,
+      { reply_markup: getAuthKeyboard(language) }
+    );
+    return;
+  }
+
   const session = await ensureSessionForChat(chatId);
   if (!session) {
-    await answerCallbackQuery(callbackQuery.id, 'Please log in first.');
-    await sendLoginPrompt(chatId);
+    const language = getChatLanguage(chatId);
+    await answerCallbackQuery(callbackQuery.id, getTextSet(language).loginFirst);
+    await sendLoginPrompt(chatId, language);
     return;
   }
 
   if (data.startsWith('child:')) {
     const studentId = Number(data.split(':')[1]);
     if (!session.studentIds.includes(studentId)) {
-      await answerCallbackQuery(callbackQuery.id, 'That child is not linked to this account.');
+      await answerCallbackQuery(callbackQuery.id, getTextSet(session.language).childNotLinked);
       return;
     }
 
     session.activeStudentId = studentId;
     const child = await getChildById(studentId);
-    await answerCallbackQuery(callbackQuery.id, 'Active child updated.');
+    await answerCallbackQuery(callbackQuery.id, getTextSet(session.language).activeChildUpdated);
     await withMainMenu(
       chatId,
       child
-        ? `Active child set to ${child.first_name} ${child.last_name}.\n\n${await getChildSummaryText(studentId)}`
-        : 'Active child updated.'
+        ? interpolate(getTextSet(session.language).activeChildSet, {
+            name: `${child.first_name} ${child.last_name}`,
+            summary: await getChildSummaryText(studentId, session.language),
+          })
+        : getTextSet(session.language).activeChildUpdated,
+      session.language
     );
   }
 };
@@ -1134,9 +1555,14 @@ const handleTelegramUpdate = async (update: any) => {
   if (text === '/start') {
     const restoredSession = await ensureSessionForChat(chatId);
     if (restoredSession) {
-      await withMainMenu(chatId, await getChildSummaryText(restoredSession.activeStudentId));
+      await withMainMenu(
+        chatId,
+        await getChildSummaryText(restoredSession.activeStudentId, restoredSession.language),
+        restoredSession.language
+      );
     } else {
-      await sendLoginPrompt(chatId);
+      const language = getChatLanguage(chatId);
+      await sendLoginPrompt(chatId, language);
     }
     return;
   }
