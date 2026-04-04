@@ -347,16 +347,14 @@ const AttendancePage = () => {
     }
   };
 
-  if (user?.userType === 'teacher') {
-    return (
-      <div className="container mx-auto p-6">
-        <TeacherAttendanceTab teacherId={user.id} />
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto p-6">
+      {user?.userType === 'teacher' && (
+        <div className="mb-8">
+          <TeacherAttendanceTab teacherId={user.id} showManualSection={false} />
+        </div>
+      )}
+
       {/* Page Header & Mode Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">Attendance</h1>

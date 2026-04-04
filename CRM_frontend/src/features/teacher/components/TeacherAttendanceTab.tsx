@@ -99,6 +99,7 @@ interface QrSessionDetailsResponse {
 interface TeacherAttendanceTabProps {
   teacherId?: number;
   onRefresh?: () => void;
+  showManualSection?: boolean;
 }
 
 const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Half Day'] as const;
@@ -198,7 +199,11 @@ const hydrateQrSession = (raw: any): QrSessionInfo => ({
   location_radius_meters: raw.location_radius_meters,
 });
 
-const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProps) => {
+const TeacherAttendanceTab = ({
+  teacherId,
+  onRefresh,
+  showManualSection = true,
+}: TeacherAttendanceTabProps) => {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [selectedClass, setSelectedClass] = useState<number | ''>('');
   const [students, setStudents] = useState<Student[]>([]);
@@ -928,7 +933,7 @@ const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProp
         </CardContent>
       </Card>
 
-      {!selectedClass ? (
+      {showManualSection && (!selectedClass ? (
         <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
           <CalendarDays className="h-14 w-14 text-gray-400 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-muted-foreground">Select a class to take attendance</h3>
@@ -1072,52 +1077,54 @@ const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProp
             </Table>
           </div>
         </>
-      )}
+      ))}
 
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Save Attendance</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground mb-3">
-            You are about to save attendance for <strong>{students.length}</strong> students on{' '}
-            <strong>{new Date(attendanceDate).toLocaleDateString()}</strong>.
-          </p>
-          <div className="flex gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 text-xs border border-green-400 text-green-600 rounded-full px-2.5 py-1">
-              <CheckCircle className="h-3 w-3" /> {attendanceStats.present} Present
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs border border-red-400 text-red-600 rounded-full px-2.5 py-1">
-              <XCircle className="h-3 w-3" /> {attendanceStats.absent} Absent
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs border border-amber-400 text-amber-600 rounded-full px-2.5 py-1">
-              <Clock className="h-3 w-3" /> {attendanceStats.late} Late
-            </span>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveAttendance}
-              disabled={saving}
-              className="bg-gradient-to-r from-indigo-500 to-purple-500"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Attendance
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {showManualSection && (
+        <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Save Attendance</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground mb-3">
+              You are about to save attendance for <strong>{students.length}</strong> students on{' '}
+              <strong>{new Date(attendanceDate).toLocaleDateString()}</strong>.
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 text-xs border border-green-400 text-green-600 rounded-full px-2.5 py-1">
+                <CheckCircle className="h-3 w-3" /> {attendanceStats.present} Present
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs border border-red-400 text-red-600 rounded-full px-2.5 py-1">
+                <XCircle className="h-3 w-3" /> {attendanceStats.absent} Absent
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs border border-amber-400 text-amber-600 rounded-full px-2.5 py-1">
+                <Clock className="h-3 w-3" /> {attendanceStats.late} Late
+              </span>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveAttendance}
+                disabled={saving}
+                className="bg-gradient-to-r from-indigo-500 to-purple-500"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Attendance
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
