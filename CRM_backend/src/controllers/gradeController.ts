@@ -1,4 +1,5 @@
 const grade_db = require('../../config/dbcon');
+const { notifyParentsAboutGrade } = require('../services/parentBotService');
 
 exports.getAllGrades = async (req: any, res: any) => {
   try {
@@ -41,6 +42,7 @@ exports.createGrade = async (req: any, res: any) => {
       'INSERT INTO grades (student_id, teacher_id, subject, class_id, marks_obtained, total_marks, percentage, grade_letter, academic_year, term) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
       [student_id, teacher_id, subject, class_id, marks_obtained, total_marks || 100, percentage, grade_letter, academic_year, term]
     );
+    void notifyParentsAboutGrade(result.rows[0], { mode: 'create' });
     res.status(201).json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -59,6 +61,7 @@ exports.updateGrade = async (req: any, res: any) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Grade not found' });
     }
+    void notifyParentsAboutGrade(result.rows[0], { mode: 'update' });
     res.json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -106,6 +109,7 @@ exports.createBulkGrades = async (req: any, res: any) => {
         [student_id, teacher_id, subject, class_id, marks_obtained, total_marks || 100, percentage, grade_letter, academic_year, term]
       );
       results.push(result.rows[0]);
+      void notifyParentsAboutGrade(result.rows[0], { mode: 'create' });
     }
 
     res.status(201).json({ message: `${results.length} grades created successfully`, grades: results });

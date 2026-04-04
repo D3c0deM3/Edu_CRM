@@ -10,6 +10,7 @@ CREATE TABLE edu_centers (
     city VARCHAR(100),
     principal_name VARCHAR(100),
     teacher_class_warning_minutes INT DEFAULT 15,
+    parent_payment_warning_days INT DEFAULT 3,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

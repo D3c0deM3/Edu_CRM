@@ -19,6 +19,7 @@ const subjectRoutes = require('./routes/subjectRoutes');
 const superuserRoutes = require('./routes/superuserRoutes');
 const testRoutes = require('./routes/testRoutes');
 const teacherSalaryRoutes = require('./routes/teacherSalaryRoutes');
+const { startParentTelegramBot } = require('./services/parentBotService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -115,6 +116,7 @@ app.use((err: Error, req: any, res: any, next: any): void => {
 // Start server
 const server = app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  void startParentTelegramBot();
 });
 
 // Graceful shutdown - use a flag to prevent multiple calls

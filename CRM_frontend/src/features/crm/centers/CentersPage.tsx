@@ -27,6 +27,7 @@ interface Center {
   city: string;
   principal_name: string;
   teacher_class_warning_minutes?: number;
+  parent_payment_warning_days?: number;
 }
 
 const CentersPage = () => {
@@ -91,6 +92,7 @@ const CentersPage = () => {
     { key: 'city', label: 'City' },
     { key: 'principal_name', label: 'Principal' },
     { key: 'teacher_class_warning_minutes', label: 'Teacher Warning (min)' },
+    { key: 'parent_payment_warning_days', label: 'Parent Payment Warning (days)' },
   ];
 
   return (
@@ -212,6 +214,24 @@ const CentersPage = () => {
               />
               <p className="text-xs text-muted-foreground">
                 Teachers will be warned on the website this many minutes before each scheduled class starts.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="parent_payment_warning_days">Parent Payment Reminder Days</Label>
+              <Input
+                id="parent_payment_warning_days"
+                type="number"
+                min="0"
+                value={formData.parent_payment_warning_days ?? 3}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    parent_payment_warning_days: Number(e.target.value),
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Parents will get Telegram reminders this many days before their child&apos;s monthly payment due date.
               </p>
             </div>
           </div>

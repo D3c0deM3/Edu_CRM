@@ -8,6 +8,12 @@ const ensureCenterReminderColumn = async (): Promise<void> => {
       ALTER TABLE edu_centers
       ADD COLUMN IF NOT EXISTS teacher_class_warning_minutes INT DEFAULT 15
     `)
+      .then(() =>
+        dc_db.query(`
+          ALTER TABLE edu_centers
+          ADD COLUMN IF NOT EXISTS parent_payment_warning_days INT DEFAULT 3
+        `)
+      )
       .then(() => undefined)
       .catch((error: any) => {
         centerReminderColumnReady = null;
@@ -47,9 +53,19 @@ exports.getCenterById = async (req: any, res: any) => {
 exports.createCenter = async (req: any, res: any) => {
   try {
     await ensureCenterReminderColumn();
-    const { center_name, center_code, email, phone, address, city, principal_name, teacher_class_warning_minutes } = req.body;
+    const {
+      center_name,
+      center_code,
+      email,
+      phone,
+      address,
+      city,
+      principal_name,
+      teacher_class_warning_minutes,
+      parent_payment_warning_days,
+    } = req.body;
     const result = await dc_db.query(
-      'INSERT INTO edu_centers (center_name, center_code, email, phone, address, city, principal_name, teacher_class_warning_minutes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      'INSERT INTO edu_centers (center_name, center_code, email, phone, address, city, principal_name, teacher_class_warning_minutes, parent_payment_warning_days) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
       [
         center_name,
         center_code,
@@ -59,6 +75,7 @@ exports.createCenter = async (req: any, res: any) => {
         city,
         principal_name,
         Number.isFinite(Number(teacher_class_warning_minutes)) ? Number(teacher_class_warning_minutes) : 15,
+        Number.isFinite(Number(parent_payment_warning_days)) ? Number(parent_payment_warning_days) : 3,
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -72,9 +89,18 @@ exports.updateCenter = async (req: any, res: any) => {
   try {
     await ensureCenterReminderColumn();
     const { id } = req.params;
-    const { center_name, email, phone, address, city, principal_name, teacher_class_warning_minutes } = req.body;
+    const {
+      center_name,
+      email,
+      phone,
+      address,
+      city,
+      principal_name,
+      teacher_class_warning_minutes,
+      parent_payment_warning_days,
+    } = req.body;
     const result = await dc_db.query(
-      'UPDATE edu_centers SET center_name = COALESCE($1, center_name), email = COALESCE($2, email), phone = COALESCE($3, phone), address = COALESCE($4, address), city = COALESCE($5, city), principal_name = COALESCE($6, principal_name), teacher_class_warning_minutes = COALESCE($7, teacher_class_warning_minutes), updated_at = CURRENT_TIMESTAMP WHERE center_id = $8 RETURNING *',
+      'UPDATE edu_centers SET center_name = COALESCE($1, center_name), email = COALESCE($2, email), phone = COALESCE($3, phone), address = COALESCE($4, address), city = COALESCE($5, city), principal_name = COALESCE($6, principal_name), teacher_class_warning_minutes = COALESCE($7, teacher_class_warning_minutes), parent_payment_warning_days = COALESCE($8, parent_payment_warning_days), updated_at = CURRENT_TIMESTAMP WHERE center_id = $9 RETURNING *',
       [
         center_name,
         email,
@@ -83,6 +109,7 @@ exports.updateCenter = async (req: any, res: any) => {
         city,
         principal_name,
         Number.isFinite(Number(teacher_class_warning_minutes)) ? Number(teacher_class_warning_minutes) : null,
+        Number.isFinite(Number(parent_payment_warning_days)) ? Number(parent_payment_warning_days) : null,
         id,
       ]
     );

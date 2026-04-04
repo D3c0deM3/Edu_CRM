@@ -16,6 +16,10 @@ CREATE TABLE students (
     date_of_birth DATE,
     parent_name VARCHAR(200),
     parent_phone VARCHAR(20),
+    parent_password_hash VARCHAR(255),
+    parent_telegram_chat_id BIGINT,
+    parent_telegram_verified_at TIMESTAMP,
+    parent_telegram_last_login_at TIMESTAMP,
     gender student_gender,
     status student_status DEFAULT 'Active',
     teacher_id INT,
@@ -27,4 +31,3 @@ CREATE TABLE students (
 CREATE INDEX idx_enrollment_number ON students(enrollment_number);
 CREATE INDEX idx_stastus ON students(status);
 CREATE INDEX idx_teacher_id ON students(teacher_id);
-

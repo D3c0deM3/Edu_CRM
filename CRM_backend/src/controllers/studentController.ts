@@ -1,6 +1,11 @@
 const student_db = require('../../config/dbcon');
 const cryptoModule1 = require('crypto');
 const { generateToken } = require('../middleware/auth');
+const {
+  ensureParentBotSchema,
+  prepareStudentParentFields,
+  sanitizeStudentForResponse,
+} = require('../services/parentBotService');
 
 // Hash password function
 const hashPassword1 = (password: string) => {
@@ -9,6 +14,7 @@ const hashPassword1 = (password: string) => {
 
 exports.getAllStudents = async (req: any, res: any) => {
   try {
+    await ensureParentBotSchema();
     const center_id = req.user?.center_id;
     if (!center_id) {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
@@ -20,7 +26,7 @@ exports.getAllStudents = async (req: any, res: any) => {
       WHERE s.center_id = $1
       ORDER BY s.student_id
     `, [center_id]);
-    res.json(result.rows);
+    res.json(result.rows.map(sanitizeStudentForResponse));
   } catch (error: any) {
     console.error('Database error:', error);
     res.status(500).json({ error: 'Failed to fetch students', details: error.message || error.toString() });
@@ -29,6 +35,7 @@ exports.getAllStudents = async (req: any, res: any) => {
 
 exports.getStudentById = async (req: any, res: any) => {
   try {
+    await ensureParentBotSchema();
     const { id } = req.params;
     const result = await student_db.query(`
       SELECT s.*, c.class_name 
@@ -39,7 +46,7 @@ exports.getStudentById = async (req: any, res: any) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
-    res.json(result.rows[0]);
+    res.json(sanitizeStudentForResponse(result.rows[0]));
   } catch (error: any) {
     console.error('Database error:', error);
     res.status(500).json({ error: 'Failed to fetch student', details: error.message || error.toString() });
@@ -48,13 +55,48 @@ exports.getStudentById = async (req: any, res: any) => {
 
 exports.createStudent = async (req: any, res: any) => {
   try {
-    const { center_id, enrollment_number, first_name, last_name, username, password, email, phone, date_of_birth, parent_name, parent_phone, gender, status, teacher_id, class_id } = req.body;
+    await ensureParentBotSchema();
+    const {
+      center_id,
+      enrollment_number,
+      first_name,
+      last_name,
+      username,
+      password,
+      email,
+      phone,
+      date_of_birth,
+      parent_name,
+      parent_phone,
+      gender,
+      status,
+      teacher_id,
+      class_id,
+    } = req.body;
     const password_hash = password ? hashPassword1(password) : null;
+    const { parentPasswordHash, normalizedParentPhone } = await prepareStudentParentFields(req.body);
     const result = await student_db.query(
-      'INSERT INTO students (center_id, enrollment_number, first_name, last_name, username, password_hash, email, phone, date_of_birth, parent_name, parent_phone, gender, status, teacher_id, class_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *',
-      [center_id, enrollment_number, first_name, last_name, username, password_hash, email, phone, date_of_birth, parent_name, parent_phone, gender, status || 'Active', teacher_id, class_id]
+      'INSERT INTO students (center_id, enrollment_number, first_name, last_name, username, password_hash, email, phone, date_of_birth, parent_name, parent_phone, parent_password_hash, gender, status, teacher_id, class_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *',
+      [
+        center_id,
+        enrollment_number,
+        first_name,
+        last_name,
+        username,
+        password_hash,
+        email,
+        phone,
+        date_of_birth,
+        parent_name,
+        normalizedParentPhone,
+        parentPasswordHash,
+        gender,
+        status || 'Active',
+        teacher_id,
+        class_id,
+      ]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(sanitizeStudentForResponse(result.rows[0]));
   } catch (error: any) {
     console.error('Database error:', error);
     res.status(500).json({ error: 'Failed to create student', details: error.message || error.toString() });
@@ -63,16 +105,38 @@ exports.createStudent = async (req: any, res: any) => {
 
 exports.updateStudent = async (req: any, res: any) => {
   try {
+    await ensureParentBotSchema();
     const { id } = req.params;
-    const { first_name, last_name, email, phone, status, class_id } = req.body;
+    const {
+      first_name,
+      last_name,
+      email,
+      phone,
+      status,
+      class_id,
+      parent_name,
+      parent_phone,
+    } = req.body;
+    const { parentPasswordHash, normalizedParentPhone } = await prepareStudentParentFields(req.body);
     const result = await student_db.query(
-      'UPDATE students SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), phone = COALESCE($4, phone), status = COALESCE($5, status), class_id = COALESCE($6, class_id), updated_at = CURRENT_TIMESTAMP WHERE student_id = $7 RETURNING *',
-      [first_name, last_name, email, phone, status, class_id, id]
+      'UPDATE students SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), phone = COALESCE($4, phone), status = COALESCE($5, status), class_id = COALESCE($6, class_id), parent_name = COALESCE($7, parent_name), parent_phone = COALESCE($8, parent_phone), parent_password_hash = COALESCE($9, parent_password_hash), updated_at = CURRENT_TIMESTAMP WHERE student_id = $10 RETURNING *',
+      [
+        first_name,
+        last_name,
+        email,
+        phone,
+        status,
+        class_id,
+        parent_name,
+        normalizedParentPhone,
+        parentPasswordHash,
+        id,
+      ]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
-    res.json(result.rows[0]);
+    res.json(sanitizeStudentForResponse(result.rows[0]));
   } catch (error: any) {
     console.error('Database error:', error);
     res.status(500).json({ error: 'Failed to update student', details: error.message || error.toString() });

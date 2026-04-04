@@ -1,5 +1,6 @@
 const db = require('../../config/dbcon');
 const cryptoModule = require('crypto');
+const { notifyParentsAboutAttendance } = require('../services/parentBotService');
 
 const DEFAULT_ATTENDANCE_STATUS = 'Present';
 const DEFAULT_QR_EXPIRY_MINUTES = 10;
@@ -336,6 +337,10 @@ exports.createAttendance = async (req: any, res: any) => {
       remarks,
     });
     await client.query('COMMIT');
+    void notifyParentsAboutAttendance(attendance, {
+      source: 'manual',
+      eventKey: `attendance-manual:${attendance.attendance_id}:${attendance.status}:${attendance.attendance_date}:${attendance.remarks || ''}`,
+    });
 
     res.status(201).json(attendance);
   } catch (error: any) {
@@ -367,6 +372,10 @@ exports.updateAttendance = async (req: any, res: any) => {
       return res.status(404).json({ error: 'Attendance not found' });
     }
 
+    void notifyParentsAboutAttendance(result.rows[0], {
+      source: 'update',
+      eventKey: `attendance-update:${result.rows[0].attendance_id}:${result.rows[0].status}:${result.rows[0].remarks || ''}`,
+    });
     res.json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -508,6 +517,12 @@ exports.createBulkAttendance = async (req: any, res: any) => {
     }
 
     await client.query('COMMIT');
+    results.forEach((attendance) => {
+      void notifyParentsAboutAttendance(attendance, {
+        source: 'manual',
+        eventKey: `attendance-manual:${attendance.attendance_id}:${attendance.status}:${attendance.attendance_date}:${attendance.remarks || ''}`,
+      });
+    });
     res.status(201).json({
       message: `${results.length} attendance records saved successfully`,
       attendance: results,
@@ -1005,6 +1020,11 @@ exports.checkInWithQrAttendanceSession = async (req: any, res: any) => {
     );
 
     await client.query('COMMIT');
+    void notifyParentsAboutAttendance(attendanceRecord, {
+      source: 'qr',
+      exactTimestamp: checkInResult.rows[0]?.checked_in_at || new Date(),
+      eventKey: `attendance-qr:${attendanceRecord.attendance_id}:${checkInResult.rows[0]?.checked_in_at || ''}`,
+    });
 
     res.json({
       message: 'Attendance checked in successfully',

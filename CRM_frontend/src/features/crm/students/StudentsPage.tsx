@@ -52,6 +52,7 @@ interface Student {
   class_id?: number;
   username?: string;
   password?: string;
+  parent_password?: string;
 }
 
 interface Class {
@@ -128,7 +129,7 @@ const StudentsPage = () => {
   const handleOpenModal = (student?: Student) => {
     if (student) {
       setEditingId(student.student_id || student.id || null);
-      setFormData({ ...student, password: '' });
+      setFormData({ ...student, password: '', parent_password: '' });
     } else {
       setEditingId(null);
       setFormData({
@@ -137,6 +138,7 @@ const StudentsPage = () => {
         status: 'Active',
         username: '',
         password: '',
+        parent_password: '',
         class_id: selectedClass ? (selectedClass.class_id || selectedClass.id) : undefined,
       });
     }
@@ -152,6 +154,7 @@ const StudentsPage = () => {
       status: 'Active',
       username: '',
       password: '',
+      parent_password: '',
     });
   };
 
@@ -654,6 +657,17 @@ const StudentsPage = () => {
                     required
                     value={formData.parent_phone || ''}
                     onChange={(e) => setFormData({ ...formData, parent_phone: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="parent_password">Parent Bot Password {!editingId && '*'}</Label>
+                  <Input
+                    id="parent_password"
+                    type="password"
+                    required={!editingId}
+                    value={formData.parent_password || ''}
+                    onChange={(e) => setFormData({ ...formData, parent_password: e.target.value })}
+                    placeholder={editingId ? 'Leave blank to keep current parent password' : 'Password for parent Telegram bot login'}
                   />
                 </div>
                 <div className="space-y-2">
