@@ -22,27 +22,45 @@ router_debt.get('/', debtController.getAllDebts);
 
 /**
  * @swagger
- * /debts/{id}:
+ * /debts/analyze:
  *   get:
- *     summary: Get debt by ID
+ *     summary: Analyze unpaid months for all students
  *     tags: [Debts]
+ *     description: Analyzes payment history to find which months have not been paid by which students
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
+ *       - in: query
+ *         name: center_id
  *         schema:
  *           type: integer
+ *         description: Filter by center ID
+ *       - in: query
+ *         name: start_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: Start date for analysis (default is 12 months ago)
+ *       - in: query
+ *         name: end_date
+ *         schema:
+ *           type: string
+ *           format: date
+ *         description: End date for analysis (default is today)
  *     responses:
  *       200:
- *         description: Debt details
+ *         description: Analysis results showing unpaid months per student
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Debt'
- *       404:
- *         description: Debt not found
+ *               type: object
+ *               properties:
+ *                 analysis_period:
+ *                   type: object
+ *                 summary:
+ *                   type: object
+ *                 results:
+ *                   type: array
  */
-router_debt.get('/:id', debtController.getDebtById);
+router_debt.get('/analyze', debtController.analyzeUnpaidMonths);
 
 /**
  * @swagger
@@ -136,45 +154,27 @@ router_debt.get('/student/:studentId/summary', debtController.getPaymentSummary)
 
 /**
  * @swagger
- * /debts/analyze:
+ * /debts/{id}:
  *   get:
- *     summary: Analyze unpaid months for all students
+ *     summary: Get debt by ID
  *     tags: [Debts]
- *     description: Analyzes payment history to find which months have not been paid by which students
  *     parameters:
- *       - in: query
- *         name: center_id
+ *       - in: path
+ *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         description: Filter by center ID
- *       - in: query
- *         name: start_date
- *         schema:
- *           type: string
- *           format: date
- *         description: Start date for analysis (default is 12 months ago)
- *       - in: query
- *         name: end_date
- *         schema:
- *           type: string
- *           format: date
- *         description: End date for analysis (default is today)
  *     responses:
  *       200:
- *         description: Analysis results showing unpaid months per student
+ *         description: Debt details
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 analysis_period:
- *                   type: object
- *                 summary:
- *                   type: object
- *                 results:
- *                   type: array
+ *               $ref: '#/components/schemas/Debt'
+ *       404:
+ *         description: Debt not found
  */
-router_debt.get('/analyze', debtController.analyzeUnpaidMonths);
+router_debt.get('/:id', debtController.getDebtById);
 
 /**
  * @swagger

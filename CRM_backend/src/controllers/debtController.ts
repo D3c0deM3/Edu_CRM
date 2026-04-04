@@ -23,6 +23,9 @@ exports.getAllDebts = async (req: any, res: any) => {
 exports.getDebtById = async (req: any, res: any) => {
   try {
     const { id } = req.params;
+    if (!/^\d+$/.test(String(id))) {
+      return res.status(400).json({ error: 'Debt id must be a number' });
+    }
     const result = await debt_db.query('SELECT * FROM debts WHERE debt_id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Debt not found' });
