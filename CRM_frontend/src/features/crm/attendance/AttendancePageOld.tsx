@@ -113,9 +113,19 @@ const AttendancePage = () => {
   useEffect(() => {
     actions.fetchAll();
     loadAllData();
-    loadDropdownOptions();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const ensureDropdownOptionsLoaded = async () => {
+    if (
+      isLoadingOptions ||
+      (studentOptions.length > 0 && teacherOptions.length > 0 && classOptions.length > 0)
+    ) {
+      return;
+    }
+
+    await loadDropdownOptions();
+  };
 
   const loadAllData = async () => {
     setLoadingData(true);
@@ -154,13 +164,20 @@ const AttendancePage = () => {
   };
 
   const handleOpenModal = (attendance?: Attendance) => {
+    void ensureDropdownOptionsLoaded();
+
     if (attendance) {
       setEditingId(attendance.attendance_id || attendance.id || null);
       setFormData(attendance);
     } else {
       setEditingId(null);
-      setFormData({ status: 'Present' });
+      setFormData({
+        status: 'Present',
+        student_id: selectedFolder?.type === 'student' ? selectedFolder.id : undefined,
+        class_id: selectedFolder?.type === 'class' ? selectedFolder.id : undefined,
+      });
     }
+
     setIsModalOpen(true);
   };
 

@@ -36,7 +36,6 @@ const isIgnoredElement = (element: Element | null): boolean => {
 
 const useAutoTranslateDocument = (language: LanguageCode) => {
   const textSourceMap = useRef(new WeakMap<Text, string>());
-  const applyingRef = useRef(false);
 
   const translateAttributes = useCallback((root: ParentNode) => {
     if (!(root instanceof Element || root instanceof Document || root instanceof DocumentFragment)) {
@@ -109,10 +108,8 @@ const useAutoTranslateDocument = (language: LanguageCode) => {
   }, [language]);
 
   const applyTranslations = useCallback((root: ParentNode) => {
-    applyingRef.current = true;
     translateTextNodes(root);
     translateAttributes(root);
-    applyingRef.current = false;
   }, [translateAttributes, translateTextNodes]);
 
   useEffect(() => {
@@ -120,37 +117,23 @@ const useAutoTranslateDocument = (language: LanguageCode) => {
     applyTranslations(document.body);
 
     const observer = new MutationObserver((mutations) => {
-      if (applyingRef.current) {
-        return;
-      }
-
+      const rootsToTranslate = new Set<ParentNode>();
       mutations.forEach((mutation) => {
-        if (mutation.type === 'characterData' && mutation.target.parentNode) {
-          applyTranslations(mutation.target.parentNode as ParentNode);
-          return;
-        }
-
-        if (mutation.type === 'attributes' && mutation.target instanceof Element) {
-          applyTranslations(mutation.target);
-          return;
-        }
-
         mutation.addedNodes.forEach((node) => {
           if (node instanceof Element || node instanceof DocumentFragment) {
-            applyTranslations(node);
+            rootsToTranslate.add(node);
           } else if (node.nodeType === Node.TEXT_NODE && node.parentNode) {
-            applyTranslations(node.parentNode as ParentNode);
+            rootsToTranslate.add(node.parentNode as ParentNode);
           }
         });
       });
+
+      rootsToTranslate.forEach((root) => applyTranslations(root));
     });
 
     observer.observe(document.body, {
       childList: true,
       subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: [...TRANSLATABLE_ATTRIBUTES],
     });
 
     return () => observer.disconnect();
