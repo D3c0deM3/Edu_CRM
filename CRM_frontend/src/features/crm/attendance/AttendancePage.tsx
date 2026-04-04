@@ -12,7 +12,8 @@ type TeacherAttendanceMode = 'qr' | 'manual';
 
 const AttendancePage = () => {
   const { user } = useAppSelector((state: RootState) => state.auth);
-  const isTeacher = user?.userType === 'teacher';
+  const canUseWorkspace = user?.userType === 'teacher' || user?.userType === 'superuser';
+  const workspaceTeacherId = user?.userType === 'teacher' ? user.id : undefined;
 
   const [teacherMode, setTeacherMode] = useState<TeacherAttendanceMode>('qr');
   const [isDragging, setIsDragging] = useState(false);
@@ -41,7 +42,7 @@ const AttendancePage = () => {
   };
 
   useEffect(() => {
-    if (!isTeacher) {
+    if (!canUseWorkspace) {
       return;
     }
 
@@ -60,7 +61,7 @@ const AttendancePage = () => {
     container.addEventListener('scroll', updateModeFromScroll, { passive: true });
 
     return () => container.removeEventListener('scroll', updateModeFromScroll);
-  }, [isTeacher]);
+  }, [canUseWorkspace]);
 
   const handleMouseDown = (event: MouseEvent<HTMLDivElement>) => {
     const container = carouselRef.current;
@@ -89,7 +90,7 @@ const AttendancePage = () => {
     setIsDragging(false);
   };
 
-  if (!isTeacher) {
+  if (!canUseWorkspace) {
     return <AttendancePageOld />;
   }
 
@@ -184,8 +185,8 @@ const AttendancePage = () => {
                       </span>
                     </div>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      Choose one of your classes, then mark each student present or absent directly
-                      in the table.
+                      Choose a class, then mark each student present or absent directly in the
+                      table.
                     </p>
                   </div>
                 </CardContent>
@@ -243,14 +244,14 @@ const AttendancePage = () => {
           >
             <section ref={qrPanelRef} className="min-w-full snap-start">
               <div className="rounded-[28px] border border-border bg-card/80 p-4 shadow-sm lg:p-6">
-                <TeacherAttendanceTab teacherId={user?.id} showManualSection={false} />
+                <TeacherAttendanceTab teacherId={workspaceTeacherId} showManualSection={false} />
               </div>
             </section>
 
             <section ref={manualPanelRef} className="min-w-full snap-start">
               <div className="rounded-[28px] border border-border bg-card/80 p-4 shadow-sm lg:p-6">
                 <TeacherAttendanceTab
-                  teacherId={user?.id}
+                  teacherId={workspaceTeacherId}
                   showQrSection={false}
                   manualMode="quick"
                 />

@@ -233,7 +233,9 @@ const TeacherAttendanceTab = ({
     () => classes.find((classItem) => classItem.class_id === selectedClass) || null,
     [classes, selectedClass]
   );
+  const isTeacherScoped = teacherId != null;
   const isQuickManualMode = showManualSection && !showQrSection && manualMode === 'quick';
+  const resolvedAttendanceTeacherId = teacherId ?? selectedClassInfo?.teacher_id ?? null;
 
   const qrCheckInUrl = useMemo(() => {
     if (!qrSession?.session_token || typeof window === 'undefined') {
@@ -321,13 +323,13 @@ const TeacherAttendanceTab = ({
       const response = await classAPI.getAll();
       const allClasses = Array.isArray(response.data) ? response.data : [];
       const teacherClasses =
-        teacherId != null
+        isTeacherScoped
           ? allClasses.filter((classItem: ClassInfo) => Number(classItem.teacher_id) === Number(teacherId))
           : allClasses;
-      setClasses(teacherId != null ? teacherClasses : allClasses);
+      setClasses(isTeacherScoped ? teacherClasses : allClasses);
     } catch (loadError) {
       console.error('Error loading classes:', loadError);
-      setError('Unable to load your classes right now.');
+      setError(`Unable to load ${isTeacherScoped ? 'your' : 'available'} classes right now.`);
     } finally {
       setLoading(false);
     }
@@ -478,7 +480,8 @@ const TeacherAttendanceTab = ({
   };
 
   const handleSaveAttendance = async () => {
-    if (!selectedClass || !teacherId) {
+    if (!selectedClass || !resolvedAttendanceTeacherId) {
+      setError('This class needs an assigned teacher before attendance can be saved.');
       return;
     }
 
@@ -492,7 +495,7 @@ const TeacherAttendanceTab = ({
         attendance_date: attendanceDate,
         status: record.status,
         remarks: record.notes || null,
-        teacher_id: teacherId,
+        teacher_id: resolvedAttendanceTeacherId,
       }));
 
       await attendanceAPI.bulkCreate(records);
@@ -670,7 +673,7 @@ const TeacherAttendanceTab = ({
               }
               className="flex h-9 w-[220px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="">-- Select your class --</option>
+              <option value="">-- Select a class --</option>
               {classes.map((classItem) => (
                 <option key={classItem.class_id} value={classItem.class_id}>
                   {classItem.class_name}
@@ -684,7 +687,9 @@ const TeacherAttendanceTab = ({
       {!classes.length && !loading && (
         <Alert>
           <AlertDescription>
-            No classes are assigned to this teacher yet, so only your own classes are shown here.
+            {isTeacherScoped
+              ? 'No classes are assigned to this teacher yet, so only your own classes are shown here.'
+              : 'No classes are available yet for attendance.'}
           </AlertDescription>
         </Alert>
       )}
@@ -958,7 +963,7 @@ const TeacherAttendanceTab = ({
         <div className="text-center py-16 bg-muted/30 rounded-lg border-2 border-dashed border-border">
           <CalendarDays className="h-14 w-14 text-muted-foreground mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-foreground">Select a class to take attendance</h3>
-          <p className="text-sm text-muted-foreground">Choose one of your classes from the dropdown above</p>
+          <p className="text-sm text-muted-foreground">Choose a class from the dropdown above</p>
         </div>
       ) : studentsLoading ? (
         <div className="flex justify-center py-8">
