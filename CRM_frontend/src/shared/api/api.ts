@@ -118,6 +118,12 @@ export const attendanceAPI = {
   bulkCreate: (records: any[]) => apiClient.post('/attendance/bulk', { records }),
   update: (id: number, data: any) => apiClient.put(`/attendance/${id}`, data),
   delete: (id: number) => apiClient.delete(`/attendance/${id}`),
+  createQrSession: (data: any) => apiClient.post('/attendance/qr-sessions', data),
+  getQrSessions: (params?: Record<string, any>) => apiClient.get('/attendance/qr-sessions', { params }),
+  getQrSession: (sessionToken: string) => apiClient.get(`/attendance/qr-sessions/${sessionToken}`),
+  checkInQrSession: (sessionToken: string, data: any) =>
+    apiClient.post(`/attendance/qr-sessions/${sessionToken}/check-in`, data),
+  closeQrSession: (sessionToken: string) => apiClient.post(`/attendance/qr-sessions/${sessionToken}/close`),
 };
 
 export const assignmentAPI = {

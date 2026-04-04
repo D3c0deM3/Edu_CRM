@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight, User, Lock, Eye, EyeOff,
   GraduationCap, Users, ShieldCheck, Loader2,
@@ -72,7 +72,9 @@ export const LoginPage = ({ userType }: LoginPageProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { loading, error } = useAppSelector((state) => state.auth);
+  const redirectPath = new URLSearchParams(location.search).get('redirect');
 
   const config = roleConfig[userType];
   const RoleIcon = config.icon;
@@ -135,9 +137,15 @@ export const LoginPage = ({ userType }: LoginPageProps) => {
       dispatch(loginSuccess({ user: userData!, token }));
       showToast.success('Login successful! Redirecting...');
 
-      if (userType === 'student') navigate('/student-portal');
-      else if (userType === 'teacher') navigate('/teacher-portal');
-      else navigate('/dashboard');
+      if (redirectPath && redirectPath.startsWith('/')) {
+        navigate(redirectPath);
+      } else if (userType === 'student') {
+        navigate('/student-portal');
+      } else if (userType === 'teacher') {
+        navigate('/teacher-portal');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       const errorMessage = handleApiError(err);
       dispatch(loginFailure(errorMessage));

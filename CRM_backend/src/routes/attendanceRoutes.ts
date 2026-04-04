@@ -21,6 +21,32 @@ const { requireRole } = require('../middleware/auth');
  */
 router_att.get('/', attendanceController.getAllAttendance);
 
+router_att.post(
+  '/qr-sessions',
+  requireRole('superuser', 'teacher'),
+  attendanceController.createQrAttendanceSession
+);
+
+router_att.get(
+  '/qr-sessions',
+  requireRole('superuser', 'teacher'),
+  attendanceController.getQrAttendanceSessions
+);
+
+router_att.get('/qr-sessions/:sessionToken', attendanceController.getQrAttendanceSession);
+
+router_att.post(
+  '/qr-sessions/:sessionToken/check-in',
+  requireRole('student'),
+  attendanceController.checkInWithQrAttendanceSession
+);
+
+router_att.post(
+  '/qr-sessions/:sessionToken/close',
+  requireRole('superuser', 'teacher'),
+  attendanceController.closeQrAttendanceSession
+);
+
 /**
  * @swagger
  * /attendance/{id}:

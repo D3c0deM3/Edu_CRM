@@ -38,6 +38,7 @@ const GradeSubmissionPage = lazy(() => import('./features/crm/tests/GradeSubmiss
 const ViewSubmissionPage = lazy(() => import('./features/crm/tests/ViewSubmissionPage'));
 const TeacherPortal = lazy(() => import('./features/teacher/TeacherPortal'));
 const StudentPortal = lazy(() => import('./features/student/StudentPortal'));
+const StudentQrAttendancePage = lazy(() => import('./features/student/StudentQrAttendancePage'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -102,6 +103,14 @@ function AppContent() {
       <Route path="/login/superuser" element={<LoginPage userType="superuser" />} />
       <Route path="/login/teacher" element={<LoginPage userType="teacher" />} />
       <Route path="/login/student" element={<LoginPage userType="student" />} />
+      <Route
+        path="/attendance/qr-check-in/:sessionToken"
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <StudentQrAttendancePage />
+          </Suspense>
+        }
+      />
 
       {/* Owner Routes */}
       <Route
