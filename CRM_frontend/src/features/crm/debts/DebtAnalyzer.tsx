@@ -3,8 +3,6 @@ import { BarChart3, ChevronDown, ChevronUp, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -61,7 +59,6 @@ const DebtAnalyzer = () => {
   const [expandedStudent, setExpandedStudent] = useState<number | null>(null);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
-  const [monthlyFee, setMonthlyFee] = useState<string>('100');
   const [generating, setGenerating] = useState(false);
 
   const handleAnalyze = async () => {
@@ -79,13 +76,12 @@ const DebtAnalyzer = () => {
   };
 
   const handleGenerateDebts = async () => {
-    if (selectedStudents.length === 0 || !monthlyFee) return;
+    if (selectedStudents.length === 0) return;
 
     try {
       setGenerating(true);
       await debtAPI.generateFromAnalysis({
         student_ids: selectedStudents,
-        monthly_fee: parseFloat(monthlyFee),
       });
       setGenerateDialogOpen(false);
       setSelectedStudents([]);
@@ -131,6 +127,10 @@ const DebtAnalyzer = () => {
             {loading ? 'Analyzing...' : 'Analyze Unpaid Months'}
           </Button>
         </div>
+
+        <p className="text-sm text-muted-foreground mb-4">
+          Monthly debt is now timed from each student&apos;s registration date and synced against completed payments automatically.
+        </p>
 
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -190,7 +190,7 @@ const DebtAnalyzer = () => {
                       disabled={selectedStudents.length === 0}
                     >
                       <Plus className="mr-1 h-4 w-4" />
-                      Generate Debts ({selectedStudents.length})
+                      Sync Auto Debts ({selectedStudents.length})
                     </Button>
                   </div>
                 </div>
@@ -310,22 +310,15 @@ const DebtAnalyzer = () => {
         <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Generate Debt Records</DialogTitle>
+              <DialogTitle>Sync Automatic Debt Records</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              This will create debt records for {selectedStudents.length} selected student(s).
+              This will sync monthly debt records for {selectedStudents.length} selected student(s)
+              using each student&apos;s class monthly fee and registration date.
             </p>
-            <div className="mt-4 space-y-2">
-              <Label htmlFor="monthlyFee">Monthly Fee Amount</Label>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">$</span>
-                <Input
-                  id="monthlyFee"
-                  type="number"
-                  value={monthlyFee}
-                  onChange={(e) => setMonthlyFee(e.target.value)}
-                />
-              </div>
+            <div className="mt-4 rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+              Any completed payments already recorded for those students will be used automatically to
+              reduce or clear the synced debt.
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>
@@ -333,9 +326,9 @@ const DebtAnalyzer = () => {
               </Button>
               <Button
                 onClick={handleGenerateDebts}
-                disabled={generating || !monthlyFee}
+                disabled={generating}
               >
-                {generating ? 'Generating...' : 'Generate'}
+                {generating ? 'Syncing...' : 'Sync'}
               </Button>
             </DialogFooter>
           </DialogContent>

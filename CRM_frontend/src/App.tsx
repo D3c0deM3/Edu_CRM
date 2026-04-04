@@ -14,6 +14,7 @@ import Dashboard from './features/crm/dashboard/Dashboard';
 import OwnerManager from './pages/owner/OwnerManager';
 import { useThemeMode } from './theme/ThemeContext';
 import { Loader2 } from 'lucide-react';
+import LanguageSwitcher from './components/common/LanguageSwitcher';
 
 // Lazy load pages for better performance
 const StudentsPage = lazy(() => import('./features/crm/students/StudentsPage'));
@@ -62,7 +63,10 @@ const UnauthorizedPage = () => {
       ? 'Go to Student Portal'
       : 'Go to Dashboard';
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-center">
+    <div className="relative flex flex-col items-center justify-center min-h-screen gap-4 text-center">
+      <div className="absolute right-4 top-4">
+        <LanguageSwitcher />
+      </div>
       <h1 className="text-4xl font-bold text-destructive">Access Denied</h1>
       <p className="text-muted-foreground">You don't have permission to access this resource.</p>
       <a href={homePath} className="text-primary hover:underline font-medium">{homeLabel}</a>

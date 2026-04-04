@@ -1,4 +1,9 @@
 const debt_db = require('../../config/dbcon');
+const {
+  getMonthlyDebtAnalysis,
+  getOutstandingDebtsForStudents,
+  syncAutoDebtsForCenter,
+} = require('../services/autoDebtService');
 
 exports.getAllDebts = async (req: any, res: any) => {
   try {
@@ -6,6 +11,7 @@ exports.getAllDebts = async (req: any, res: any) => {
     if (!center_id) {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
     }
+    await syncAutoDebtsForCenter(center_id);
     const result = await debt_db.query('SELECT * FROM debts WHERE center_id = $1 ORDER BY debt_id DESC', [center_id]);
     res.json(result.rows);
   } catch (error: any) {
@@ -71,7 +77,14 @@ exports.updateDebt = async (req: any, res: any) => {
 exports.getDebtsByStudent = async (req: any, res: any) => {
   try {
     const { studentId } = req.params;
-    const result = await debt_db.query('SELECT * FROM debts WHERE student_id = $1 ORDER BY debt_date DESC', [studentId]);
+    const center_id = req.user?.center_id;
+    if (center_id) {
+      await syncAutoDebtsForCenter(center_id, [Number(studentId)]);
+    }
+    const result = await debt_db.query(
+      'SELECT * FROM debts WHERE student_id = $1 AND center_id = $2 ORDER BY debt_date DESC',
+      [studentId, center_id]
+    );
     res.json(result.rows);
   } catch (error) {
     console.error('Database error:', error);
@@ -99,116 +112,16 @@ exports.deleteDebt = async (req: any, res: any) => {
 
 exports.analyzeUnpaidMonths = async (req: any, res: any) => {
   try {
-    // Always enforce center_id from the authenticated user's token
     const center_id = req.user?.center_id;
     if (!center_id) {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
     }
     const { start_date, end_date } = req.query;
-    
-    // Get all active students for this center
-    const studentQuery = 'SELECT student_id, first_name, last_name, enrollment_number, center_id FROM students WHERE status = $1 AND center_id = $2';
-    const studentsResult = await debt_db.query(studentQuery, ['Active', center_id]);
-    const students = studentsResult.rows;
-
-    // Determine date range for analysis (default: last 12 months)
-    const endDate = end_date ? new Date(end_date) : new Date();
-    const startDate = start_date ? new Date(start_date) : new Date(endDate.getFullYear(), endDate.getMonth() - 11, 1);
-
-    // Generate list of months to check
-    const monthsToCheck: { year: number; month: number; label: string }[] = [];
-    const current = new Date(startDate);
-    while (current <= endDate) {
-      monthsToCheck.push({
-        year: current.getFullYear(),
-        month: current.getMonth() + 1,
-        label: current.toLocaleString('default', { month: 'long', year: 'numeric' })
-      });
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    // Analyze each student
-    interface AnalysisResult {
-      student_id: number;
-      student_name: string;
-      enrollment_number: string;
-      center_id: number;
-      unpaid_months: { year: number; month: number; label: string }[];
-      unpaid_months_count: number;
-      total_payments: number;
-      existing_debts: any[];
-      total_debt_balance: number;
-    }
-    
-    const analysisResults: AnalysisResult[] = [];
-
-    for (const student of students) {
-      // Get all payments for this student within the date range
-      const paymentsResult = await debt_db.query(`
-        SELECT payment_date, amount, payment_status, payment_type
-        FROM payments 
-        WHERE student_id = $1 
-          AND payment_date >= $2 
-          AND payment_date <= $3
-          AND payment_status = 'Completed'
-        ORDER BY payment_date ASC
-      `, [student.student_id, startDate, endDate]);
-
-      const payments = paymentsResult.rows;
-
-      // Create a set of paid months
-      const paidMonths = new Set<string>();
-      payments.forEach((p: any) => {
-        const date = new Date(p.payment_date);
-        paidMonths.add(`${date.getFullYear()}-${date.getMonth() + 1}`);
-      });
-
-      // Find unpaid months
-      const unpaidMonths = monthsToCheck.filter(m => 
-        !paidMonths.has(`${m.year}-${m.month}`)
-      );
-
-      // Get existing debts for this student
-      const debtsResult = await debt_db.query(`
-        SELECT debt_id, debt_amount, debt_date, due_date, amount_paid, balance
-        FROM debts 
-        WHERE student_id = $1 AND balance > 0
-        ORDER BY debt_date ASC
-      `, [student.student_id]);
-
-      const totalDebt = debtsResult.rows.reduce((sum: number, d: any) => sum + parseFloat(d.balance || 0), 0);
-
-      if (unpaidMonths.length > 0 || totalDebt > 0) {
-        analysisResults.push({
-          student_id: student.student_id,
-          student_name: `${student.first_name} ${student.last_name}`,
-          enrollment_number: student.enrollment_number,
-          center_id: student.center_id,
-          unpaid_months: unpaidMonths,
-          unpaid_months_count: unpaidMonths.length,
-          total_payments: payments.length,
-          existing_debts: debtsResult.rows,
-          total_debt_balance: totalDebt
-        });
-      }
-    }
-
-    // Sort by unpaid months count (descending)
-    analysisResults.sort((a, b) => b.unpaid_months_count - a.unpaid_months_count);
-
-    res.json({
-      analysis_period: {
-        start: startDate.toISOString().split('T')[0],
-        end: endDate.toISOString().split('T')[0],
-        months_analyzed: monthsToCheck.length
-      },
-      summary: {
-        total_students_analyzed: students.length,
-        students_with_unpaid_months: analysisResults.length,
-        total_unpaid_instances: analysisResults.reduce((sum, r) => sum + r.unpaid_months_count, 0)
-      },
-      results: analysisResults
+    const analysis = await getMonthlyDebtAnalysis(center_id, {
+      startDate: start_date,
+      endDate: end_date,
     });
+    res.json(analysis);
   } catch (error: any) {
     console.error('Database error:', error);
     res.status(500).json({ error: 'Failed to analyze unpaid months', details: error.message || error.toString() });
@@ -218,8 +131,7 @@ exports.analyzeUnpaidMonths = async (req: any, res: any) => {
 // Generate debts for unpaid months
 exports.generateDebtsFromAnalysis = async (req: any, res: any) => {
   try {
-    const { student_ids, monthly_fee, remarks } = req.body;
-    // Always use center_id from the authenticated user's token
+    const { student_ids } = req.body;
     const center_id = req.user?.center_id;
     if (!center_id) {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
@@ -229,40 +141,12 @@ exports.generateDebtsFromAnalysis = async (req: any, res: any) => {
       return res.status(400).json({ error: 'student_ids array is required' });
     }
 
-    if (!monthly_fee || monthly_fee <= 0) {
-      return res.status(400).json({ error: 'valid monthly_fee is required' });
-    }
-
-    const createdDebts: any[] = [];
-    const today = new Date();
-
-    for (const studentId of student_ids) {
-      // Verify the student belongs to the requesting superuser's center
-      const studentCheck = await debt_db.query('SELECT center_id FROM students WHERE student_id = $1 AND center_id = $2', [studentId, center_id]);
-      if (studentCheck.rows.length === 0) {
-        continue; // Skip students not belonging to this center
-      }
-
-      const result = await debt_db.query(`
-          INSERT INTO debts (student_id, center_id, debt_amount, debt_date, due_date, amount_paid, balance, remarks)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          RETURNING *
-        `, [
-        studentId,
-        center_id,
-        monthly_fee,
-        today,
-        new Date(today.getFullYear(), today.getMonth() + 1, 15), // Due 15th of next month
-        0,
-        monthly_fee,
-        remarks || 'Generated from unpaid months analysis'
-      ]);
-      createdDebts.push(result.rows[0]);
-    }
+    await syncAutoDebtsForCenter(center_id, student_ids);
+    const debts = await getOutstandingDebtsForStudents(center_id, student_ids);
 
     res.status(201).json({
-      message: `Created ${createdDebts.length} debt records`,
-      debts: createdDebts
+      message: `Synchronized automatic debt records for ${student_ids.length} student(s)`,
+      debts,
     });
   } catch (error: any) {
     console.error('Database error:', error);
@@ -274,6 +158,10 @@ exports.generateDebtsFromAnalysis = async (req: any, res: any) => {
 exports.getPaymentSummary = async (req: any, res: any) => {
   try {
     const { studentId } = req.params;
+    const center_id = req.user?.center_id;
+    if (center_id) {
+      await syncAutoDebtsForCenter(center_id, [Number(studentId)]);
+    }
     
     // Get all payments
     const paymentsResult = await debt_db.query(`
@@ -307,3 +195,5 @@ exports.getPaymentSummary = async (req: any, res: any) => {
     res.status(500).json({ error: 'Failed to get payment summary', details: error.message || error.toString() });
   }
 };
+
+export {};

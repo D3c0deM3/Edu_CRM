@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 import { useAppDispatch, useAppSelector } from '../../features/crm/hooks';
 import { setLoading, loginSuccess, loginFailure } from '../../slices/authSlice';
 import { authAPI } from '../../shared/api/api';
@@ -159,6 +160,9 @@ export const LoginPage = ({ userType }: LoginPageProps) => {
     <div className="min-h-screen flex relative overflow-hidden bg-slate-900">
       {/* Background effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(99,102,241,0.12)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(139,92,246,0.12)_0%,transparent_50%)]" />
+      <div className="absolute right-4 top-4 z-20">
+        <LanguageSwitcher />
+      </div>
 
       {/* Left side - branding */}
       <div className="flex-1 hidden md:flex flex-col justify-center items-center relative p-12">

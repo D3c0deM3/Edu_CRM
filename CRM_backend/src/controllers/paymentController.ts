@@ -1,4 +1,5 @@
 const payment_db = require('../../config/dbcon');
+const { syncAutoDebtsForCenter } = require('../services/autoDebtService');
 
 exports.getAllPayments = async (req: any, res: any) => {
   try {
@@ -6,6 +7,7 @@ exports.getAllPayments = async (req: any, res: any) => {
     if (!center_id) {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
     }
+    await syncAutoDebtsForCenter(center_id);
     const result = await payment_db.query('SELECT * FROM payments WHERE center_id = $1 ORDER BY payment_id DESC', [center_id]);
     res.json(result.rows);
   } catch (error: any) {
@@ -35,6 +37,7 @@ exports.createPayment = async (req: any, res: any) => {
       'INSERT INTO payments (student_id, center_id, payment_date, amount, currency, payment_method, transaction_reference, receipt_number, payment_status, payment_type, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
       [student_id, center_id, payment_date, amount, currency || 'USD', payment_method || 'Cash', transaction_reference, receipt_number, payment_status || 'Completed', payment_type, notes]
     );
+    await syncAutoDebtsForCenter(result.rows[0].center_id, [result.rows[0].student_id]);
     res.status(201).json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -53,6 +56,7 @@ exports.updatePayment = async (req: any, res: any) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Payment not found' });
     }
+    await syncAutoDebtsForCenter(result.rows[0].center_id, [result.rows[0].student_id]);
     res.json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -63,7 +67,14 @@ exports.updatePayment = async (req: any, res: any) => {
 exports.getPaymentsByStudent = async (req: any, res: any) => {
   try {
     const { studentId } = req.params;
-    const result = await payment_db.query('SELECT * FROM payments WHERE student_id = $1 ORDER BY payment_date DESC', [studentId]);
+    const center_id = req.user?.center_id;
+    if (center_id) {
+      await syncAutoDebtsForCenter(center_id, [Number(studentId)]);
+    }
+    const result = await payment_db.query(
+      'SELECT * FROM payments WHERE student_id = $1 AND center_id = $2 ORDER BY payment_date DESC',
+      [studentId, center_id]
+    );
     res.json(result.rows);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -78,9 +89,12 @@ exports.deletePayment = async (req: any, res: any) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Payment not found' });
     }
+    await syncAutoDebtsForCenter(result.rows[0].center_id, [result.rows[0].student_id]);
     res.json({ message: 'Payment deleted successfully', payment: result.rows[0] });
   } catch (error: any) {
     console.error('Database error:', error);
     res.status(500).json({ error: 'Failed to delete payment', details: error.message || error.toString() });
   }
 };
+
+export {};

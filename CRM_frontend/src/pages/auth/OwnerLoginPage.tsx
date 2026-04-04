@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 import { useAppDispatch, useAppSelector } from '../../features/crm/hooks';
 import { setLoading, loginSuccess, loginFailure } from '../../slices/authSlice';
 import { showToast } from '../../utils/toast';
@@ -59,6 +60,9 @@ export const OwnerLoginPage = () => {
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-slate-900">
       {/* Background */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_70%,rgba(245,175,25,0.12)_0%,transparent_50%),radial-gradient(circle_at_70%_30%,rgba(241,39,17,0.12)_0%,transparent_50%)]" />
+      <div className="absolute right-4 top-4 z-20">
+        <LanguageSwitcher />
+      </div>
 
       <div className="relative z-10 w-full max-w-[440px] px-4 sm:px-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Back button */}

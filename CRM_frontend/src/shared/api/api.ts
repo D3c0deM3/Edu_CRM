@@ -141,7 +141,7 @@ export const debtAPI = {
   getPaymentSummary: (studentId: number) => apiClient.get(`/debts/student/${studentId}/summary`),
   analyzeUnpaidMonths: (params?: { center_id?: number; start_date?: string; end_date?: string }) => 
     apiClient.get('/debts/analyze', { params }),
-  generateFromAnalysis: (data: { student_ids: number[]; monthly_fee: number; center_id?: number; remarks?: string }) =>
+  generateFromAnalysis: (data: { student_ids: number[]; monthly_fee?: number; center_id?: number; remarks?: string }) =>
     apiClient.post('/debts/generate-from-analysis', data),
   create: (data: any) => apiClient.post('/debts', data),
   update: (id: number, data: any) => apiClient.put(`/debts/${id}`, data),

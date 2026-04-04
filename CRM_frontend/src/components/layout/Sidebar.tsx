@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useAppDispatch, useAppSelector, useRBAC } from '../../features/crm/hooks';
 import { logout } from '../../slices/authSlice';
 import { useThemeMode } from '../../theme/ThemeContext';
+import LanguageSwitcher from '../common/LanguageSwitcher';
 
 const iconMap: Record<string, React.ElementType> = {
   Dashboard: LayoutDashboard,
@@ -155,8 +156,12 @@ const Sidebar = memo(() => {
 
       <Separator className="bg-white/[0.06]" />
 
-      {/* Theme Toggle */}
       <div className="px-3 pt-3 pb-1.5">
+        <LanguageSwitcher className="w-full justify-between border-white/[0.08] bg-white/[0.04] text-white" />
+      </div>
+
+      {/* Theme Toggle */}
+      <div className="px-3 pt-1.5 pb-1.5">
         <Button
           variant="ghost"
           onClick={toggleTheme}
