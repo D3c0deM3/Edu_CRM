@@ -188,3 +188,143 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary) / 0.6);
 }
+
+@layer components {
+  .attendance-legacy {
+    @apply space-y-5 text-foreground;
+  }
+
+  .attendance-legacy .payments-header {
+    @apply flex flex-col gap-4 rounded-3xl border border-border/70 bg-card/80 p-5 text-card-foreground shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .attendance-legacy .payments-header-left {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .attendance-legacy .payments-header-left h1 {
+    @apply text-2xl font-semibold tracking-tight text-foreground;
+  }
+
+  .attendance-legacy .btn-add,
+  .attendance-legacy .btn-back,
+  .attendance-legacy .btn-filter,
+  .attendance-legacy .tab,
+  .attendance-legacy .clear-search {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background/80 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground;
+  }
+
+  .attendance-legacy .btn-add {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .attendance-legacy .btn-back {
+    @apply px-3 py-2;
+  }
+
+  .attendance-legacy .alert-error {
+    @apply rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive;
+  }
+
+  .attendance-legacy .tabs-container {
+    @apply rounded-3xl border border-border/70 bg-card/70 p-2 shadow-sm;
+  }
+
+  .attendance-legacy .tabs-bar {
+    @apply grid grid-cols-1 gap-2 md:grid-cols-3;
+  }
+
+  .attendance-legacy .tab.active {
+    @apply border-primary bg-primary text-primary-foreground shadow-sm;
+  }
+
+  .attendance-legacy .tab-content,
+  .attendance-legacy .folder-section {
+    @apply space-y-4;
+  }
+
+  .attendance-legacy .folder-grid {
+    @apply grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .attendance-legacy .folder-card {
+    @apply flex cursor-pointer items-start gap-4 rounded-3xl border border-border/70 bg-card/85 p-5 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md;
+  }
+
+  .attendance-legacy .folder-icon {
+    @apply flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary;
+  }
+
+  .attendance-legacy .folder-info {
+    @apply min-w-0 flex-1 space-y-1;
+  }
+
+  .attendance-legacy .folder-info h3 {
+    @apply truncate text-base font-semibold text-card-foreground;
+  }
+
+  .attendance-legacy .folder-code {
+    @apply block text-sm text-muted-foreground;
+  }
+
+  .attendance-legacy .folder-stats {
+    @apply ml-auto flex min-w-fit flex-col items-end gap-2 text-xs text-muted-foreground;
+  }
+
+  .attendance-legacy .stat {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground;
+  }
+
+  .attendance-legacy .loading-text,
+  .attendance-legacy .empty-text {
+    @apply col-span-full rounded-3xl border border-dashed border-border bg-card/60 px-6 py-12 text-center text-sm text-muted-foreground;
+  }
+
+  .attendance-legacy .search-filter-bar {
+    @apply flex flex-col gap-3 rounded-3xl border border-border/70 bg-card/80 p-4 shadow-sm lg:flex-row lg:items-center;
+  }
+
+  .attendance-legacy .search-input-wrapper {
+    @apply relative flex-1;
+  }
+
+  .attendance-legacy .search-input {
+    @apply h-11 w-full rounded-xl border border-input bg-background pl-11 pr-11 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  .attendance-legacy .search-icon {
+    @apply pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground;
+  }
+
+  .attendance-legacy .clear-search {
+    @apply absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 p-0;
+  }
+
+  .attendance-legacy .btn-filter {
+    @apply relative min-w-fit;
+  }
+
+  .attendance-legacy .btn-filter.active {
+    @apply border-primary/40 bg-primary/10 text-primary;
+  }
+
+  .attendance-legacy .filter-badge {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground;
+  }
+
+  .attendance-legacy .form-row {
+    @apply grid grid-cols-1 gap-4 md:grid-cols-2;
+  }
+
+  .attendance-legacy .student-folder .folder-icon {
+    @apply bg-sky-500/10 text-sky-600 dark:text-sky-400;
+  }
+
+  .attendance-legacy .class-folder .folder-icon {
+    @apply bg-violet-500/10 text-violet-600 dark:text-violet-400;
+  }
+
+  .attendance-legacy .teacher-folder .folder-icon {
+    @apply bg-emerald-500/10 text-emerald-600 dark:text-emerald-400;
+  }
+}

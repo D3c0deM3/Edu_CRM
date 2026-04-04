@@ -311,7 +311,7 @@ const AttendancePage = () => {
   };
 
   return (
-    <div className="payments-page">
+    <div className="attendance-legacy payments-page">
       {/* Header */}
       <div className="payments-header">
         <div className="payments-header-left">
