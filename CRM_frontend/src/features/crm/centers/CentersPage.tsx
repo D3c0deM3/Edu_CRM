@@ -26,6 +26,7 @@ interface Center {
   address: string;
   city: string;
   principal_name: string;
+  teacher_class_warning_minutes?: number;
 }
 
 const CentersPage = () => {
@@ -89,6 +90,7 @@ const CentersPage = () => {
     { key: 'phone', label: 'Phone' },
     { key: 'city', label: 'City' },
     { key: 'principal_name', label: 'Principal' },
+    { key: 'teacher_class_warning_minutes', label: 'Teacher Warning (min)' },
   ];
 
   return (
@@ -193,6 +195,24 @@ const CentersPage = () => {
                 value={formData.principal_name || ''}
                 onChange={(e) => setFormData({ ...formData, principal_name: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="teacher_class_warning_minutes">Teacher Class Warning Minutes</Label>
+              <Input
+                id="teacher_class_warning_minutes"
+                type="number"
+                min="0"
+                value={formData.teacher_class_warning_minutes ?? 15}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    teacher_class_warning_minutes: Number(e.target.value),
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Teachers will be warned on the website this many minutes before each scheduled class starts.
+              </p>
             </div>
           </div>
           <DialogFooter>

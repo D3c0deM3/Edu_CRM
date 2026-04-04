@@ -9,6 +9,7 @@ CREATE TABLE edu_centers (
     address TEXT,
     city VARCHAR(100),
     principal_name VARCHAR(100),
+    teacher_class_warning_minutes INT DEFAULT 15,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
