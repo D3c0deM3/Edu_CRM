@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useMemo } from 'react';
 import { useCRUD } from '../hooks/useCRUD';
+import { useAppSelector } from '../hooks';
 import { attendanceAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,6 +50,8 @@ import {
   UserX,
   Clock,
 } from 'lucide-react';
+import TeacherAttendanceTab from '../../teacher/components/TeacherAttendanceTab';
+import type { RootState } from '../../../store';
 
 interface Attendance {
   attendance_id?: number;
@@ -103,6 +106,7 @@ const STATUS_OPTIONS = [
 const todayISO = () => new Date().toISOString().split('T')[0];
 
 const AttendancePage = () => {
+  const { user } = useAppSelector((state: RootState) => state.auth);
   const [state, actions] = useCRUD<Attendance>(attendanceAPI, 'Attendance');
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
@@ -342,6 +346,14 @@ const AttendancePage = () => {
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
+  if (user?.userType === 'teacher') {
+    return (
+      <div className="container mx-auto p-6">
+        <TeacherAttendanceTab teacherId={user.id} />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6">

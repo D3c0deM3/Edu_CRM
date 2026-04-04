@@ -6,7 +6,6 @@ import {
   Clock,
   Copy,
   Loader2,
-  MapPin,
   QrCode,
   RefreshCw,
   Save,
@@ -20,7 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -106,6 +104,8 @@ interface TeacherAttendanceTabProps {
 const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Half Day'] as const;
 
 const todayIso = () => new Date().toISOString().split('T')[0];
+const DEFAULT_QR_EXPIRY_MINUTES = 10;
+const DEFAULT_QR_RADIUS_METERS = 75;
 
 const requestBrowserPosition = (
   options: PositionOptions
@@ -217,9 +217,6 @@ const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProp
   const [qrSession, setQrSession] = useState<QrSessionInfo | null>(null);
   const [qrSessionDetails, setQrSessionDetails] = useState<QrSessionDetailsResponse | null>(null);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
-  const [qrExpiryMinutes, setQrExpiryMinutes] = useState('10');
-  const [qrRequireLocation, setQrRequireLocation] = useState(false);
-  const [qrRadiusMeters, setQrRadiusMeters] = useState('75');
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrHint, setQrHint] = useState<string | null>(null);
 
@@ -239,6 +236,12 @@ const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProp
   useEffect(() => {
     loadClasses();
   }, [teacherId]);
+
+  useEffect(() => {
+    if (classes.length === 1 && !selectedClass) {
+      setSelectedClass(classes[0].class_id);
+    }
+  }, [classes, selectedClass]);
 
   useEffect(() => {
     if (!selectedClass) {
@@ -510,22 +513,48 @@ const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProp
       const payload: Record<string, any> = {
         class_id: selectedClass,
         attendance_date: attendanceDate,
-        expires_in_minutes: Number(qrExpiryMinutes) || 10,
-        location_required: qrRequireLocation,
-        location_radius_meters: Number(qrRadiusMeters) || 75,
+        expires_in_minutes: DEFAULT_QR_EXPIRY_MINUTES,
+        location_radius_meters: DEFAULT_QR_RADIUS_METERS,
       };
+      let locationLockEnabled = false;
 
-      if (qrRequireLocation) {
+      try {
         const location = await getCurrentPosition();
         Object.assign(payload, location);
-        setQrHint('Teacher location captured. Students will need to be nearby to check in.');
+        payload.location_required = true;
+        locationLockEnabled = true;
+      } catch (locationError: any) {
+        payload.location_required = false;
+        console.warn('QR session created without location lock:', locationError);
       }
 
       const response = await attendanceAPI.createQrSession(payload);
       const createdSession = hydrateQrSession(response.data.session);
       setQrSession(createdSession);
-      await loadQrSessionDetails(createdSession.session_token, false);
+      setQrSessionDetails({
+        session: createdSession,
+        roster: students.map((student) => ({
+          student_id: student.student_id,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          enrollment_number: student.enrollment_number,
+          attendance_status: attendance.get(student.student_id)?.status || null,
+          checked_in_at: null,
+          distance_meters: null,
+          location_validated: null,
+        })),
+        summary: {
+          total_students: students.length,
+          checked_in_students: 0,
+        },
+      });
+      setQrHint(
+        locationLockEnabled
+          ? `QR is live. Nearby check-in is locked to ${DEFAULT_QR_RADIUS_METERS}m around your current location for all ${students.length} students in this class.`
+          : `QR is live for all ${students.length} students in this class. Location took too long, so this session was created without nearby-location lock.`
+      );
       onRefresh?.();
+      void loadQrSessionDetails(createdSession.session_token, false);
     } catch (createError: any) {
       console.error('Error creating QR session:', createError);
       setQrError(
@@ -698,79 +727,47 @@ const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProp
             <>
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-5">
                 <div className="rounded-2xl border border-slate-200 p-4 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="qr-expiry">QR expires after</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="qr-expiry"
-                          type="number"
-                          min="1"
-                          max="120"
-                          value={qrExpiryMinutes}
-                          onChange={(event) => setQrExpiryMinutes(event.target.value)}
-                        />
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">minutes</span>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="rounded-xl border bg-slate-50/70 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Class</p>
+                      <p className="mt-1 font-semibold text-slate-900">{selectedClassInfo?.class_name}</p>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Room</Label>
-                      <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground">
-                        {selectedClassInfo?.room_number || 'Room not specified'}
-                      </div>
+                    <div className="rounded-xl border bg-slate-50/70 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Students</p>
+                      <p className="mt-1 font-semibold text-slate-900">{students.length}</p>
+                    </div>
+                    <div className="rounded-xl border bg-slate-50/70 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Radius</p>
+                      <p className="mt-1 font-semibold text-slate-900">{DEFAULT_QR_RADIUS_METERS}m default</p>
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-medium text-slate-900 flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-indigo-500" />
-                          Require nearby location
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          Students will only be checked in if they are close to your current location when you generate the QR.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={qrRequireLocation}
-                        onCheckedChange={setQrRequireLocation}
-                      />
-                    </div>
-
-                    {qrRequireLocation && (
-                      <div className="space-y-1.5">
-                        <Label htmlFor="qr-radius">Allowed radius</Label>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            id="qr-radius"
-                            type="number"
-                            min="20"
-                            max="500"
-                            value={qrRadiusMeters}
-                            onChange={(event) => setQrRadiusMeters(event.target.value)}
-                          />
-                          <span className="text-sm text-muted-foreground whitespace-nowrap">meters</span>
-                        </div>
-                      </div>
-                    )}
+                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
+                    <p className="font-medium text-slate-900">One-click QR attendance</p>
+                    <p className="text-sm text-slate-600 mt-1">
+                      One click generates a live QR immediately for all {students.length} students in this class.
+                      If your device location responds in time, the session automatically uses a {DEFAULT_QR_RADIUS_METERS}m nearby check-in lock.
+                    </p>
+                    <p className="text-sm text-slate-600 mt-2">
+                      Room: {selectedClassInfo?.room_number || 'Not specified'}
+                    </p>
                   </div>
 
                   <div className="flex gap-3 flex-wrap">
                     <Button
                       onClick={handleCreateQrSession}
                       disabled={qrBusy}
-                      className="bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600"
+                      className="bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 min-w-[210px]"
                     >
                       {qrBusy ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Preparing QR...
+                          Generating QR...
                         </>
                       ) : (
                         <>
                           <QrCode className="h-4 w-4 mr-2" />
-                          {qrSession?.active ? 'Regenerate QR' : 'Generate QR'}
+                          {qrSession?.active ? 'Regenerate Live QR' : 'Generate Live QR'}
                         </>
                       )}
                     </Button>
@@ -804,13 +801,13 @@ const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProp
                         <img
                           src={qrImageUrl}
                           alt="Attendance QR code"
-                          className="w-full max-w-[280px] mx-auto"
+                          className="w-full max-w-[340px] mx-auto"
                         />
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-slate-700">
                           <Smartphone className="h-4 w-4 text-indigo-500" />
-                          Students scan this with their phone camera.
+                          Students scan this and attendance is marked automatically.
                         </div>
                         <div className="text-xs text-slate-500 break-all rounded-xl border bg-white px-3 py-2">
                           {qrCheckInUrl}
