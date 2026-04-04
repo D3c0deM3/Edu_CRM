@@ -107,34 +107,72 @@ const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Half Day'] as const;
 
 const todayIso = () => new Date().toISOString().split('T')[0];
 
+const requestBrowserPosition = (
+  options: PositionOptions
+): Promise<GeolocationPosition> =>
+  new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+
 const getCurrentPosition = (): Promise<{
   location_latitude: number;
   location_longitude: number;
   location_accuracy_meters: number | null;
 }> =>
-  new Promise((resolve, reject) => {
+  new Promise(async (resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Geolocation is not supported on this device.'));
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          location_latitude: position.coords.latitude,
-          location_longitude: position.coords.longitude,
-          location_accuracy_meters: position.coords.accuracy ?? null,
+    try {
+      let position: GeolocationPosition;
+
+      try {
+        position = await requestBrowserPosition({
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 0,
         });
-      },
-      (error) => {
-        reject(new Error(error.message || 'Unable to capture your current location.'));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 0,
+      } catch (firstError: any) {
+        if (firstError?.code !== 3) {
+          throw firstError;
+        }
+
+        position = await requestBrowserPosition({
+          enableHighAccuracy: false,
+          timeout: 20000,
+          maximumAge: 60000,
+        });
       }
-    );
+
+      resolve({
+        location_latitude: position.coords.latitude,
+        location_longitude: position.coords.longitude,
+        location_accuracy_meters: position.coords.accuracy ?? null,
+      });
+    } catch (error: any) {
+      if (error?.code === 1) {
+        reject(new Error('Location access was blocked. Allow browser location permission and try again.'));
+        return;
+      }
+
+      if (error?.code === 2) {
+        reject(new Error('Your location could not be determined. Check GPS/network access or try again.'));
+        return;
+      }
+
+      if (error?.code === 3) {
+        reject(
+          new Error(
+            'Location lookup timed out. Try again near a window/open area, or turn off "Require nearby location".'
+          )
+        );
+        return;
+      }
+
+      reject(new Error(error?.message || 'Unable to capture your current location.'));
+    }
   });
 
 const hydrateQrSession = (raw: any): QrSessionInfo => ({

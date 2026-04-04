@@ -47,34 +47,72 @@ interface StudentSessionResponse {
   } | null;
 }
 
+const requestBrowserPosition = (
+  options: PositionOptions
+): Promise<GeolocationPosition> =>
+  new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+
 const getCurrentPosition = (): Promise<{
   latitude: number;
   longitude: number;
   accuracy_meters: number | null;
 }> =>
-  new Promise((resolve, reject) => {
+  new Promise(async (resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Geolocation is not supported on this device.'));
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy_meters: position.coords.accuracy ?? null,
+    try {
+      let position: GeolocationPosition;
+
+      try {
+        position = await requestBrowserPosition({
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 0,
         });
-      },
-      (error) => {
-        reject(new Error(error.message || 'Unable to get your current location.'));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 0,
+      } catch (firstError: any) {
+        if (firstError?.code !== 3) {
+          throw firstError;
+        }
+
+        position = await requestBrowserPosition({
+          enableHighAccuracy: false,
+          timeout: 20000,
+          maximumAge: 60000,
+        });
       }
-    );
+
+      resolve({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy_meters: position.coords.accuracy ?? null,
+      });
+    } catch (error: any) {
+      if (error?.code === 1) {
+        reject(new Error('Location access was blocked. Allow browser location permission and try again.'));
+        return;
+      }
+
+      if (error?.code === 2) {
+        reject(new Error('Your location could not be determined. Check GPS/network access or try again.'));
+        return;
+      }
+
+      if (error?.code === 3) {
+        reject(
+          new Error(
+            'Location lookup timed out. Try again near a window/open area, or ask the teacher to generate QR without location lock.'
+          )
+        );
+        return;
+      }
+
+      reject(new Error(error?.message || 'Unable to get your current location.'));
+    }
   });
 
 const StudentQrAttendancePage = () => {
