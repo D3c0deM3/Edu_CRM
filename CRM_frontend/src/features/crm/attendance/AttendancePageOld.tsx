@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { useCRUD } from '../hooks/useCRUD';
 import { attendanceAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
@@ -7,8 +6,6 @@ import { fetchStudents, fetchTeachers, fetchClasses, attendanceStatusOptions } f
 import { 
   ArrowLeft, 
   Plus, 
-  Mail, 
-  Phone, 
   BookOpen, 
   Users, 
   User, 
@@ -21,7 +18,6 @@ import {
   X 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -48,7 +44,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
 
 interface Attendance {
   attendance_id?: number;
