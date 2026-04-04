@@ -2,7 +2,7 @@ import { useState, useEffect, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, CreditCard, BarChart3,
-  ClipboardList, CheckCircle, Building2, AlertTriangle, FileQuestion,
+  ClipboardList, CheckCircle, Building2, AlertTriangle, FileQuestion, HandCoins,
   LogOut, Sun, Moon, Menu, X, User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,7 @@ const iconMap: Record<string, React.ElementType> = {
   MdBusiness: Building2,
   MdWarning: AlertTriangle,
   MdQuiz: FileQuestion,
+  MdSalary: HandCoins,
 };
 
 const DRAWER_WIDTH = 280;
@@ -59,6 +60,7 @@ const Sidebar = memo(() => {
     { label: 'Classes', path: '/classes', iconName: 'MdBook', roles: ['superuser', 'teacher'] },
     { label: 'Tests', path: '/tests', iconName: 'MdQuiz', roles: ['superuser', 'teacher'] },
     { label: 'Payments', path: '/payments', iconName: 'MdPayment', roles: ['superuser'] },
+    { label: 'Teacher Salaries', path: '/teacher-salaries', iconName: 'MdSalary', roles: ['superuser'] },
     { label: 'Grades', path: '/grades', iconName: 'MdBarChart', roles: ['superuser', 'teacher'] },
     { label: 'Attendance', path: '/attendance', iconName: 'MdAssignment', roles: ['superuser', 'teacher'] },
     { label: 'Assignments', path: '/assignments', iconName: 'MdChecklist', roles: ['superuser', 'teacher'] },

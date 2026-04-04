@@ -18,6 +18,7 @@ const assignmentRoutes = require('./routes/assignmentRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 const superuserRoutes = require('./routes/superuserRoutes');
 const testRoutes = require('./routes/testRoutes');
+const teacherSalaryRoutes = require('./routes/teacherSalaryRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -83,6 +84,9 @@ app.use('/api/payments', requireAuth, requireRole('superuser'), paymentRoutes);
 
 // Debts: superuser only
 app.use('/api/debts', requireAuth, requireRole('superuser'), debtRoutes);
+
+// Teacher salaries: superuser only
+app.use('/api/teacher-salaries', requireAuth, requireRole('superuser'), teacherSalaryRoutes);
 
 // Grades: superuser and teacher manage; students can read their own
 app.use('/api/grades', requireAuth, requireRole('superuser', 'teacher', 'student'), gradeRoutes);

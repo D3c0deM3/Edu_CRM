@@ -27,6 +27,7 @@ const AttendancePage = lazy(() => import('./features/crm/attendance/AttendancePa
 const ClassesPage = lazy(() => import('./features/crm/classes/ClassesPage'));
 const CentersPage = lazy(() => import('./features/crm/centers/CentersPage'));
 const DebtsPage = lazy(() => import('./features/crm/debts/DebtsPage'));
+const TeacherSalariesPage = lazy(() => import('./features/crm/teacher-salaries/TeacherSalariesPage'));
 const AssignmentsPage = lazy(() => import('./features/crm/assignments/AssignmentsPage'));
 const SubjectsPage = lazy(() => import('./features/crm/subjects/SubjectsPage'));
 const TestsPage = lazy(() => import('./features/crm/tests/TestsPage'));
@@ -202,6 +203,19 @@ function AppContent() {
             <Layout>
               <Suspense fallback={<LoadingSpinner />}>
                 <PaymentsPage />
+              </Suspense>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/teacher-salaries"
+        element={
+          <ProtectedRoute requiredUserType="superuser">
+            <Layout>
+              <Suspense fallback={<LoadingSpinner />}>
+                <TeacherSalariesPage />
               </Suspense>
             </Layout>
           </ProtectedRoute>

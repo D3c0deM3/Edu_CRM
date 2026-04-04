@@ -148,6 +148,20 @@ export const debtAPI = {
   delete: (id: number) => apiClient.delete(`/debts/${id}`),
 };
 
+export const teacherSalaryAPI = {
+  getOverview: (params?: { month?: number; year?: number }) =>
+    apiClient.get('/teacher-salaries/overview', { params }),
+  getRates: () => apiClient.get('/teacher-salaries/rates'),
+  createRate: (data: any) => apiClient.post('/teacher-salaries/rates', data),
+  updateRate: (id: number, data: any) => apiClient.put(`/teacher-salaries/rates/${id}`, data),
+  deleteRate: (id: number) => apiClient.delete(`/teacher-salaries/rates/${id}`),
+  getPayments: (params?: { teacher_id?: number; month?: number; year?: number }) =>
+    apiClient.get('/teacher-salaries/payments', { params }),
+  createPayment: (data: any) => apiClient.post('/teacher-salaries/payments', data),
+  updatePayment: (id: number, data: any) => apiClient.put(`/teacher-salaries/payments/${id}`, data),
+  deletePayment: (id: number) => apiClient.delete(`/teacher-salaries/payments/${id}`),
+};
+
 export const testAPI = {
   // Test CRUD
   getAll: (params?: { center_id?: number; test_type?: string; is_active?: boolean; subject_id?: number }) =>
