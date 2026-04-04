@@ -95,7 +95,7 @@ const AttendancePage = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-slate-200/80 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-sm">
+      <Card className="overflow-hidden border-border/70 bg-gradient-to-br from-background via-card to-muted/40 shadow-sm">
         <CardHeader className="space-y-4 pb-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
@@ -105,7 +105,7 @@ const AttendancePage = () => {
                 attendance, or tap the cards to jump straight in.
               </CardDescription>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-2 text-xs font-medium text-slate-500 shadow-sm">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-2 text-xs font-medium text-muted-foreground shadow-sm">
               <MoveHorizontal className="h-4 w-4" />
               Drag sideways to switch
             </div>
@@ -119,10 +119,10 @@ const AttendancePage = () => {
             >
               <Card
                 className={cn(
-                  'h-full border-2 bg-white/90 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+                  'h-full border-2 bg-card/90 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
                   teacherMode === 'qr'
                     ? 'border-indigo-500 ring-4 ring-indigo-500/10'
-                    : 'border-slate-200/80'
+                    : 'border-border/80'
                 )}
               >
                 <CardContent className="flex items-start gap-4 p-5">
@@ -130,20 +130,20 @@ const AttendancePage = () => {
                     className={cn(
                       'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
                       teacherMode === 'qr'
-                        ? 'bg-indigo-100 text-indigo-600'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-indigo-500/15 text-indigo-500'
+                        : 'bg-muted text-muted-foreground'
                     )}
                   >
                     <QrCode className="h-6 w-6" />
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold text-slate-900">QR Attendance</h3>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                      <h3 className="text-base font-semibold text-foreground">QR Attendance</h3>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                         Fast check-in
                       </span>
                     </div>
-                    <p className="text-sm leading-6 text-slate-600">
+                    <p className="text-sm leading-6 text-muted-foreground">
                       Generate a live QR code on the spot and let students mark themselves present
                       as they scan.
                     </p>
@@ -159,10 +159,10 @@ const AttendancePage = () => {
             >
               <Card
                 className={cn(
-                  'h-full border-2 bg-white/90 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+                  'h-full border-2 bg-card/90 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
                   teacherMode === 'manual'
                     ? 'border-emerald-500 ring-4 ring-emerald-500/10'
-                    : 'border-slate-200/80'
+                    : 'border-border/80'
                 )}
               >
                 <CardContent className="flex items-start gap-4 p-5">
@@ -170,22 +170,22 @@ const AttendancePage = () => {
                     className={cn(
                       'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
                       teacherMode === 'manual'
-                        ? 'bg-emerald-100 text-emerald-600'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-emerald-500/15 text-emerald-500'
+                        : 'bg-muted text-muted-foreground'
                     )}
                   >
                     <ClipboardCheck className="h-6 w-6" />
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold text-slate-900">Manual Attendance</h3>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                      <h3 className="text-base font-semibold text-foreground">Manual Attendance</h3>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                         Full control
                       </span>
                     </div>
-                    <p className="text-sm leading-6 text-slate-600">
-                      Open the roster, review history, and mark students yourself when you need a
-                      more hands-on workflow.
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Choose one of your classes, then mark each student present or absent directly
+                      in the table.
                     </p>
                   </div>
                 </CardContent>
@@ -200,13 +200,13 @@ const AttendancePage = () => {
               <span
                 className={cn(
                   'h-2.5 w-2.5 rounded-full transition-colors',
-                  teacherMode === 'qr' ? 'bg-indigo-500' : 'bg-slate-300'
+                  teacherMode === 'qr' ? 'bg-indigo-500' : 'bg-muted'
                 )}
               />
               <span
                 className={cn(
                   'h-2.5 w-2.5 rounded-full transition-colors',
-                  teacherMode === 'manual' ? 'bg-emerald-500' : 'bg-slate-300'
+                  teacherMode === 'manual' ? 'bg-emerald-500' : 'bg-muted'
                 )}
               />
             </div>
@@ -242,14 +242,18 @@ const AttendancePage = () => {
             )}
           >
             <section ref={qrPanelRef} className="min-w-full snap-start">
-              <div className="rounded-[28px] border border-indigo-100 bg-white/90 p-4 shadow-sm lg:p-6">
+              <div className="rounded-[28px] border border-border bg-card/80 p-4 shadow-sm lg:p-6">
                 <TeacherAttendanceTab teacherId={user?.id} showManualSection={false} />
               </div>
             </section>
 
             <section ref={manualPanelRef} className="min-w-full snap-start">
-              <div className="rounded-[28px] border border-emerald-100 bg-white/90 p-4 shadow-sm lg:p-6">
-                <AttendancePageOld />
+              <div className="rounded-[28px] border border-border bg-card/80 p-4 shadow-sm lg:p-6">
+                <TeacherAttendanceTab
+                  teacherId={user?.id}
+                  showQrSection={false}
+                  manualMode="quick"
+                />
               </div>
             </section>
           </div>

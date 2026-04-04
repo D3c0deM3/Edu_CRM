@@ -100,6 +100,8 @@ interface TeacherAttendanceTabProps {
   teacherId?: number;
   onRefresh?: () => void;
   showManualSection?: boolean;
+  showQrSection?: boolean;
+  manualMode?: 'full' | 'quick';
 }
 
 const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Half Day'] as const;
@@ -203,6 +205,8 @@ const TeacherAttendanceTab = ({
   teacherId,
   onRefresh,
   showManualSection = true,
+  showQrSection = true,
+  manualMode = 'full',
 }: TeacherAttendanceTabProps) => {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [selectedClass, setSelectedClass] = useState<number | ''>('');
@@ -229,6 +233,7 @@ const TeacherAttendanceTab = ({
     () => classes.find((classItem) => classItem.class_id === selectedClass) || null,
     [classes, selectedClass]
   );
+  const isQuickManualMode = showManualSection && !showQrSection && manualMode === 'quick';
 
   const qrCheckInUrl = useMemo(() => {
     if (!qrSession?.session_token || typeof window === 'undefined') {
@@ -319,7 +324,7 @@ const TeacherAttendanceTab = ({
         teacherId != null
           ? allClasses.filter((classItem: ClassInfo) => Number(classItem.teacher_id) === Number(teacherId))
           : allClasses;
-      setClasses(teacherClasses.length > 0 ? teacherClasses : allClasses);
+      setClasses(teacherId != null ? teacherClasses : allClasses);
     } catch (loadError) {
       console.error('Error loading classes:', loadError);
       setError('Unable to load your classes right now.');
@@ -633,7 +638,13 @@ const TeacherAttendanceTab = ({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
-        <h3 className="text-lg font-semibold">Take Attendance</h3>
+        <h3 className="text-lg font-semibold">
+          {showQrSection && showManualSection
+            ? 'Take Attendance'
+            : showQrSection
+              ? 'QR Attendance'
+              : 'Manual Attendance'}
+        </h3>
         <div className="flex gap-3 items-center flex-wrap">
           <div>
             <Label htmlFor="att-date" className="text-xs text-muted-foreground">
@@ -659,7 +670,7 @@ const TeacherAttendanceTab = ({
               }
               className="flex h-9 w-[220px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value="">-- Select --</option>
+              <option value="">-- Select your class --</option>
               {classes.map((classItem) => (
                 <option key={classItem.class_id} value={classItem.class_id}>
                   {classItem.class_name}
@@ -669,6 +680,14 @@ const TeacherAttendanceTab = ({
           </div>
         </div>
       </div>
+
+      {!classes.length && !loading && (
+        <Alert>
+          <AlertDescription>
+            No classes are assigned to this teacher yet, so only your own classes are shown here.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive">
@@ -682,7 +701,8 @@ const TeacherAttendanceTab = ({
         </Alert>
       )}
 
-      <Card className="border-indigo-200/70 shadow-sm">
+      {showQrSection && (
+      <Card className="border-border/70 bg-card/90 shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
@@ -717,43 +737,43 @@ const TeacherAttendanceTab = ({
           )}
 
           {qrHint && (
-            <Alert className="border-blue-300 bg-blue-50 text-blue-800">
+            <Alert className="border-blue-300/60 bg-blue-500/10 text-blue-700 dark:text-blue-200">
               <AlertDescription>{qrHint}</AlertDescription>
             </Alert>
           )}
 
           {!selectedClass ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center">
-              <QrCode className="h-10 w-10 mx-auto text-slate-400 mb-3" />
-              <p className="font-medium text-slate-700">Select a class first</p>
-              <p className="text-sm text-slate-500">The QR session will use the selected class and date.</p>
+            <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-6 py-8 text-center">
+              <QrCode className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+              <p className="font-medium text-foreground">Select a class first</p>
+              <p className="text-sm text-muted-foreground">The QR session will use the selected class and date.</p>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-5">
-                <div className="rounded-2xl border border-slate-200 p-4 space-y-4">
+                <div className="rounded-2xl border border-border p-4 space-y-4 bg-card/70">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="rounded-xl border bg-slate-50/70 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Class</p>
-                      <p className="mt-1 font-semibold text-slate-900">{selectedClassInfo?.class_name}</p>
+                    <div className="rounded-xl border bg-muted/40 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Class</p>
+                      <p className="mt-1 font-semibold text-foreground">{selectedClassInfo?.class_name}</p>
                     </div>
-                    <div className="rounded-xl border bg-slate-50/70 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Students</p>
-                      <p className="mt-1 font-semibold text-slate-900">{students.length}</p>
+                    <div className="rounded-xl border bg-muted/40 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Students</p>
+                      <p className="mt-1 font-semibold text-foreground">{students.length}</p>
                     </div>
-                    <div className="rounded-xl border bg-slate-50/70 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Radius</p>
-                      <p className="mt-1 font-semibold text-slate-900">{DEFAULT_QR_RADIUS_METERS}m default</p>
+                    <div className="rounded-xl border bg-muted/40 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Radius</p>
+                      <p className="mt-1 font-semibold text-foreground">{DEFAULT_QR_RADIUS_METERS}m default</p>
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
-                    <p className="font-medium text-slate-900">One-click QR attendance</p>
-                    <p className="text-sm text-slate-600 mt-1">
+                  <div className="rounded-xl border border-indigo-300/30 bg-indigo-500/10 p-4">
+                    <p className="font-medium text-foreground">One-click QR attendance</p>
+                    <p className="text-sm text-muted-foreground mt-1">
                       One click generates a live QR immediately for all {students.length} students in this class.
                       If your device location responds in time, the session automatically uses a {DEFAULT_QR_RADIUS_METERS}m nearby check-in lock.
                     </p>
-                    <p className="text-sm text-slate-600 mt-2">
+                    <p className="text-sm text-muted-foreground mt-2">
                       Room: {selectedClassInfo?.room_number || 'Not specified'}
                     </p>
                   </div>
@@ -795,7 +815,7 @@ const TeacherAttendanceTab = ({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50/50">
+                <div className="rounded-2xl border border-border p-4 bg-muted/30">
                   {qrLoading || qrBusy ? (
                     <div className="flex min-h-[260px] items-center justify-center">
                       <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
@@ -810,11 +830,11 @@ const TeacherAttendanceTab = ({
                         />
                       </div>
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-slate-700">
+                        <div className="flex items-center gap-2 text-sm text-foreground">
                           <Smartphone className="h-4 w-4 text-indigo-500" />
                           Students scan this and attendance is marked automatically.
                         </div>
-                        <div className="text-xs text-slate-500 break-all rounded-xl border bg-white px-3 py-2">
+                        <div className="text-xs text-muted-foreground break-all rounded-xl border bg-background px-3 py-2">
                           {qrCheckInUrl}
                         </div>
                         <Button variant="outline" onClick={handleCopyQrLink} className="w-full">
@@ -825,9 +845,9 @@ const TeacherAttendanceTab = ({
                     </div>
                   ) : (
                     <div className="min-h-[260px] flex flex-col items-center justify-center text-center px-6">
-                      <QrCode className="h-12 w-12 text-slate-400 mb-3" />
-                      <p className="font-medium text-slate-700">QR code will appear here</p>
-                      <p className="text-sm text-slate-500">
+                      <QrCode className="h-12 w-12 text-muted-foreground mb-3" />
+                      <p className="font-medium text-foreground">QR code will appear here</p>
+                      <p className="text-sm text-muted-foreground">
                         Generate a session to start live QR-based attendance.
                       </p>
                     </div>
@@ -866,11 +886,11 @@ const TeacherAttendanceTab = ({
               ) : null}
 
               {qrSessionDetails?.roster?.length ? (
-                <div className="rounded-2xl border border-slate-200 overflow-hidden">
-                  <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 border-b">
+                <div className="rounded-2xl border border-border overflow-hidden">
+                  <div className="flex items-center justify-between gap-3 px-4 py-3 bg-muted/40 border-b">
                     <div>
-                      <p className="font-medium text-slate-900">Live QR check-ins</p>
-                      <p className="text-sm text-slate-500">
+                      <p className="font-medium text-foreground">Live QR check-ins</p>
+                      <p className="text-sm text-muted-foreground">
                         Students move into the checked-in list as soon as they scan and validate.
                       </p>
                     </div>
@@ -883,7 +903,7 @@ const TeacherAttendanceTab = ({
                   </div>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
+                      <TableRow className="bg-muted/40">
                         <TableHead>Student</TableHead>
                         <TableHead>Enrollment #</TableHead>
                         <TableHead>QR Status</TableHead>
@@ -932,12 +952,13 @@ const TeacherAttendanceTab = ({
           )}
         </CardContent>
       </Card>
+      )}
 
       {showManualSection && (!selectedClass ? (
-        <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-          <CalendarDays className="h-14 w-14 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-lg font-semibold text-muted-foreground">Select a class to take attendance</h3>
-          <p className="text-sm text-muted-foreground">Choose a class from the dropdown above</p>
+        <div className="text-center py-16 bg-muted/30 rounded-lg border-2 border-dashed border-border">
+          <CalendarDays className="h-14 w-14 text-muted-foreground mx-auto mb-3" />
+          <h3 className="text-lg font-semibold text-foreground">Select a class to take attendance</h3>
+          <p className="text-sm text-muted-foreground">Choose one of your classes from the dropdown above</p>
         </div>
       ) : studentsLoading ? (
         <div className="flex justify-center py-8">
@@ -949,39 +970,43 @@ const TeacherAttendanceTab = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Card className="bg-green-50/50 text-center">
+          <div className={cn('grid gap-3', isQuickManualMode ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4')}>
+            <Card className="bg-green-500/10 text-center border-green-500/20">
               <CardContent className="py-3">
                 <p className="text-3xl font-bold text-green-600">{attendanceStats.present}</p>
                 <p className="text-xs text-muted-foreground">Present</p>
               </CardContent>
             </Card>
-            <Card className="bg-red-50/50 text-center">
+            <Card className="bg-red-500/10 text-center border-red-500/20">
               <CardContent className="py-3">
                 <p className="text-3xl font-bold text-red-500">{attendanceStats.absent}</p>
                 <p className="text-xs text-muted-foreground">Absent</p>
               </CardContent>
             </Card>
-            <Card className="bg-amber-50/50 text-center">
+            {!isQuickManualMode && (
+            <Card className="bg-amber-500/10 text-center border-amber-500/20">
               <CardContent className="py-3">
                 <p className="text-3xl font-bold text-amber-500">{attendanceStats.late}</p>
                 <p className="text-xs text-muted-foreground">Late</p>
               </CardContent>
             </Card>
-            <Card className="bg-blue-50/50 text-center">
+            )}
+            {!isQuickManualMode && (
+            <Card className="bg-blue-500/10 text-center border-blue-500/20">
               <CardContent className="py-3">
                 <p className="text-3xl font-bold text-blue-500">{attendanceStats.halfDay}</p>
                 <p className="text-xs text-muted-foreground">Half Day</p>
               </CardContent>
             </Card>
+            )}
           </div>
 
           <div className="flex gap-3 flex-wrap">
-            <Button variant="outline" className="border-green-400 text-green-600 hover:bg-green-50" onClick={markAllPresent}>
+            <Button variant="outline" className="border-green-400/60 text-green-600 hover:bg-green-500/10 dark:text-green-300" onClick={markAllPresent}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Mark All Present
             </Button>
-            <Button variant="outline" className="border-red-400 text-red-600 hover:bg-red-50" onClick={markAllAbsent}>
+            <Button variant="outline" className="border-red-400/60 text-red-600 hover:bg-red-500/10 dark:text-red-300" onClick={markAllAbsent}>
               <XCircle className="h-4 w-4 mr-2" />
               Mark All Absent
             </Button>
@@ -996,22 +1021,22 @@ const TeacherAttendanceTab = ({
           </div>
 
           {existingAttendance.length > 0 && (
-            <Alert className="border-blue-300 bg-blue-50 text-blue-800">
+            <Alert className="border-blue-300/60 bg-blue-500/10 text-blue-700 dark:text-blue-200">
               <AlertDescription>
                 Attendance already exists for this date. Saving will update the existing records instead of duplicating them.
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="border rounded-md overflow-hidden">
+          <div className="border border-border rounded-md overflow-hidden bg-card/70">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50">
+                <TableRow className="bg-muted/40">
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead>Enrollment #</TableHead>
-                  <TableHead className="w-[320px]">Status</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead className={cn(isQuickManualMode ? 'w-[240px]' : 'w-[320px]')}>Status</TableHead>
+                  {!isQuickManualMode && <TableHead>Notes</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1019,7 +1044,7 @@ const TeacherAttendanceTab = ({
                   const record = attendance.get(student.student_id);
 
                   return (
-                    <TableRow key={student.student_id} className="hover:bg-gray-50">
+                    <TableRow key={student.student_id} className="hover:bg-muted/30">
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -1037,12 +1062,15 @@ const TeacherAttendanceTab = ({
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
-                          {STATUS_OPTIONS.map((status) => (
+                          {(isQuickManualMode
+                            ? (['Present', 'Absent'] as const)
+                            : STATUS_OPTIONS
+                          ).map((status) => (
                             <button
                               key={status}
                               onClick={() => handleStatusChange(student.student_id, status)}
                               className={cn(
-                                'px-2 py-1 text-xs rounded border transition-colors',
+                                'px-2.5 py-1.5 text-xs rounded-md border transition-colors',
                                 record?.status === status
                                   ? status === 'Present'
                                     ? 'bg-green-500 text-white border-green-500'
@@ -1051,7 +1079,7 @@ const TeacherAttendanceTab = ({
                                       : status === 'Late'
                                         ? 'bg-amber-500 text-white border-amber-500'
                                         : 'bg-blue-500 text-white border-blue-500'
-                                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                  : 'bg-background text-muted-foreground border-border hover:bg-muted/40'
                               )}
                             >
                               {status === 'Present' && <CheckCircle className="h-3 w-3 inline mr-1" />}
@@ -1062,6 +1090,7 @@ const TeacherAttendanceTab = ({
                           ))}
                         </div>
                       </TableCell>
+                      {!isQuickManualMode && (
                       <TableCell>
                         <Input
                           placeholder="Add notes..."
@@ -1070,6 +1099,7 @@ const TeacherAttendanceTab = ({
                           className="w-52 h-8 text-sm"
                         />
                       </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
