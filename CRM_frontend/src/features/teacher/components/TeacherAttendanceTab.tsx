@@ -273,7 +273,7 @@ const TeacherAttendanceTab = ({ teacherId, onRefresh }: TeacherAttendanceTabProp
         teacherId != null
           ? allClasses.filter((classItem: ClassInfo) => Number(classItem.teacher_id) === Number(teacherId))
           : allClasses;
-      setClasses(teacherClasses);
+      setClasses(teacherClasses.length > 0 ? teacherClasses : allClasses);
     } catch (loadError) {
       console.error('Error loading classes:', loadError);
       setError('Unable to load your classes right now.');
