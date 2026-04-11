@@ -185,7 +185,7 @@ const TakeTestPage = () => {
 
   if (error && !test) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -198,7 +198,7 @@ const TakeTestPage = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="mx-auto max-w-5xl p-4 sm:p-6">
       {/* Header */}
       <div className="bg-white rounded-lg border p-4 mb-6 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-4">

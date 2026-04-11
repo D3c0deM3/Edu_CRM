@@ -178,7 +178,7 @@ const TestAssignPage = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="mx-auto max-w-5xl p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" onClick={() => navigate(`/tests/${testId}`)}>

@@ -162,7 +162,7 @@ const StudentDetailPage = () => {
 
   if (!student) {
     return (
-      <div className="p-6 text-center py-16 text-muted-foreground">
+      <div className="px-4 py-16 text-center text-muted-foreground sm:px-6">
         <h3 className="text-lg font-semibold">Student not found</h3>
       </div>
     );
@@ -194,7 +194,7 @@ const StudentDetailPage = () => {
       : 'N/A';
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={() => navigate('/students')}>

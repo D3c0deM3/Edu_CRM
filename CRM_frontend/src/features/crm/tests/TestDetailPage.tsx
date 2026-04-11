@@ -134,7 +134,7 @@ const TestDetailPage = () => {
 
   if (!test) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <Alert variant="destructive">
           <AlertDescription>Test not found</AlertDescription>
         </Alert>
@@ -154,7 +154,7 @@ const TestDetailPage = () => {
   const canTakeTest = test.is_active;
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-start gap-3 mb-8">
         <button

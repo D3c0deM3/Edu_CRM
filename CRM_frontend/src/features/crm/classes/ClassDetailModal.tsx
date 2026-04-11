@@ -319,7 +319,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ open, classData, on
           {/* Tab 1: Class Info */}
           <TabsContent value="info" className="pt-4">
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <p className="text-sm text-muted-foreground">Class Code</p>
                   <p className="font-semibold">{classData.class_code}</p>

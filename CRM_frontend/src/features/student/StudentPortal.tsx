@@ -140,17 +140,17 @@ const StudentPortal = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header Card */}
       <Card className="mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-0 relative overflow-hidden">
         <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-white/10" />
-        <CardContent className="p-8 relative">
-          <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+        <CardContent className="relative p-5 sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-xl font-bold sm:h-20 sm:w-20 sm:text-2xl">
               {user?.first_name?.[0]}{user?.last_name?.[0]}
             </div>
             <div>
-              <h2 className="text-3xl font-bold mb-0.5">
+              <h2 className="mb-0.5 text-2xl font-bold sm:text-3xl">
                 Welcome, {user?.first_name}!
               </h2>
               <p className="opacity-90">Student Portal</p>
@@ -184,7 +184,7 @@ const StudentPortal = () => {
       {/* Tabs Section */}
       <Card>
         <Tabs value={tabValue} onValueChange={setTabValue}>
-          <div className="border-b px-4">
+          <div className="overflow-x-auto border-b px-2 sm:px-4 [-webkit-overflow-scrolling:touch]">
             <TabsList className="bg-transparent h-14">
               <TabsTrigger value="overview" className="data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none gap-2 font-semibold">
                 <LayoutDashboard className="h-4 w-4" /> Overview

@@ -112,11 +112,11 @@ const DebtsPage = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Debts Management</h1>
-        <Button onClick={() => handleOpenModal()}>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Add Debt
         </Button>
       </div>
@@ -136,7 +136,7 @@ const DebtsPage = () => {
           <CardTitle>Debt Records</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -214,7 +214,7 @@ const DebtsPage = () => {
             <DialogTitle>{editingId ? 'Edit Debt' : 'Add New Debt'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <SelectField
                 label="Student"
                 name="student_id"
@@ -240,7 +240,7 @@ const DebtsPage = () => {
                 placeholder="Select a center"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Debt Amount *</Label>
                 <Input
@@ -262,7 +262,7 @@ const DebtsPage = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Debt Date *</Label>
                 <Input

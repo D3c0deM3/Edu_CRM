@@ -52,13 +52,13 @@ export const CRUDTable: React.FC<CRUDTableProps> = ({
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-6 px-4">
-      <div className="mb-6 flex justify-between items-center">
+    <div className="mx-auto w-full max-w-5xl px-0 py-2 sm:px-4 sm:py-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-        <Button onClick={onAdd}><Plus className="mr-2 h-4 w-4" />Add New</Button>
+        <Button onClick={onAdd} className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" />Add New</Button>
       </div>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
-      <div className="rounded-xl border bg-card">
+      <div className="overflow-hidden rounded-xl border bg-card">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">

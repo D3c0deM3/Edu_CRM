@@ -162,11 +162,11 @@ const TestsPage = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Tests Management</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Tests Management</h1>
           <p className="text-sm text-muted-foreground">
             Create, manage, and grade tests for your students
           </p>
@@ -174,7 +174,7 @@ const TestsPage = () => {
         {(user?.userType === 'superuser' || user?.userType === 'teacher') && (
           <Button
             onClick={() => navigate('/tests/create')}
-            className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white px-6 py-3"
+            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-white hover:from-indigo-600 hover:to-purple-600 sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create New Test

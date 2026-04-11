@@ -121,7 +121,7 @@ const StudentTestsPage = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-1">My Tests</h1>

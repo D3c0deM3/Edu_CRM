@@ -63,12 +63,12 @@ const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
     if (typeof document === 'undefined') return null;
 
     return createPortal(
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center sm:p-4">
         <DialogOverlay onClick={() => ctx?.onOpenChange?.(false)} />
         <div
           ref={ref}
           className={cn(
-            'modal relative z-10 grid w-full max-w-lg gap-4 rounded-xl border bg-background p-6 shadow-lg',
+            'modal relative z-10 grid max-h-[calc(100dvh-1.5rem)] w-full max-w-lg gap-4 overflow-y-auto rounded-t-2xl border bg-background p-5 shadow-lg sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl sm:p-6',
             className
           )}
           {...props}
@@ -96,7 +96,7 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 DialogHeader.displayName = 'DialogHeader';
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)} {...props} />
+  <div className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end [&>button]:w-full sm:[&>button]:w-auto', className)} {...props} />
 );
 DialogFooter.displayName = 'DialogFooter';
 

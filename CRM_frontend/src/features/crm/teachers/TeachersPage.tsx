@@ -133,13 +133,13 @@ const TeachersPage = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>Teachers Management</h1>
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold sm:text-3xl" style={{ color: 'hsl(var(--foreground))' }}>Teachers Management</h1>
         <Button
           onClick={() => handleOpenModal()}
-          className="bg-gradient-to-br from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 px-6 py-3 rounded-lg font-semibold"
+          className="w-full rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-3 font-semibold hover:from-indigo-600 hover:to-violet-600 sm:w-auto"
         >
           <Plus className="w-5 h-5 mr-2" />
           Add Teacher
@@ -164,7 +164,7 @@ const TeachersPage = () => {
           <p className="text-sm">Click &quot;Add Teacher&quot; to get started</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
           {state.items.map((teacher) => (
             <Card
               key={teacher.teacher_id || teacher.id}
@@ -266,7 +266,7 @@ const TeachersPage = () => {
             </div>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
-            <div className="p-6">
+            <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto p-4 sm:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">First Name</Label>
@@ -423,7 +423,7 @@ const TeachersPage = () => {
                 )}
               </div>
             </div>
-            <DialogFooter className="px-6 py-4">
+            <DialogFooter className="px-4 py-4 sm:px-6">
               <Button type="button" variant="outline" onClick={handleCloseModal} className="rounded-lg">
                 Cancel
               </Button>

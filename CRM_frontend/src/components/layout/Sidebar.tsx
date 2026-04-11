@@ -32,6 +32,7 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 const DRAWER_WIDTH = 280;
+const DESKTOP_BREAKPOINT = 1024;
 
 const Sidebar = memo(() => {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,7 +45,7 @@ const Sidebar = memo(() => {
   useRBAC();
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
+    const check = () => setIsMobile(window.innerWidth < DESKTOP_BREAKPOINT);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
@@ -115,8 +116,8 @@ const Sidebar = memo(() => {
               </Avatar>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-800" />
             </div>
-            <div>
-              <p className="text-sm font-semibold leading-tight">{user.first_name} {user.last_name}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-tight">{user.first_name} {user.last_name}</p>
               <p className="text-[0.7rem] font-medium text-indigo-400 uppercase tracking-wider">{user.userType}</p>
             </div>
           </div>
@@ -194,7 +195,8 @@ const Sidebar = memo(() => {
       {isMobile && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed top-4 left-4 z-[999] p-2 rounded-lg bg-slate-800 text-white hover:bg-slate-700 transition-colors shadow-lg"
+          className="fixed left-3 top-3 z-[999] p-2.5 rounded-xl bg-slate-800 text-white shadow-lg shadow-slate-900/20 transition-colors hover:bg-slate-700 lg:hidden"
+          aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -202,17 +204,16 @@ const Sidebar = memo(() => {
 
       {/* Mobile overlay */}
       {isMobile && isOpen && (
-        <div className="fixed inset-0 z-[1200] bg-black/60" onClick={() => setIsOpen(false)} />
+        <div className="fixed inset-0 z-[1200] bg-black/60 backdrop-blur-[2px] lg:hidden" onClick={() => setIsOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside
         className={cn(
-          'h-screen border-r border-white/[0.06] shrink-0 transition-transform duration-300 z-[1300]',
-          isMobile ? 'fixed top-0 left-0' : 'fixed top-0 left-0',
+          'fixed left-0 top-0 z-[1300] h-dvh max-h-dvh shrink-0 border-r border-white/[0.06] transition-transform duration-300 ease-out',
           isMobile && !isOpen && '-translate-x-full'
         )}
-        style={{ width: DRAWER_WIDTH }}
+        style={{ width: isMobile ? `min(86vw, ${DRAWER_WIDTH}px)` : DRAWER_WIDTH }}
       >
         {sidebarContent}
       </aside>

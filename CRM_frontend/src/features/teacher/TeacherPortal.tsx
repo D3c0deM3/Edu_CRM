@@ -242,7 +242,7 @@ const TeacherPortal = () => {
   }
 
   return (
-    <div className="p-5 space-y-5 relative">
+    <div className="relative space-y-4 p-4 sm:space-y-5 sm:p-5">
 
       {/* ──── Header Banner ──── */}
       <div className="animate-fade-in-down rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-500 animate-gradient text-white relative overflow-hidden">

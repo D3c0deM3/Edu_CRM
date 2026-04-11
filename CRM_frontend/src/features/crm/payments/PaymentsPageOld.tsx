@@ -300,9 +300,9 @@ const PaymentsPage = () => {
   const totalAmount = displayedPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           {selectedFolder && (
             <Button variant="outline" size="sm" onClick={handleBackToFolders}>

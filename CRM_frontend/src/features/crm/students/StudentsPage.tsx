@@ -245,10 +245,10 @@ const StudentsPage = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-3">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
           {selectedClass && (
             <Button
               variant="outline"
@@ -258,7 +258,7 @@ const StudentsPage = () => {
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
           )}
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="min-w-0 text-2xl font-bold text-foreground sm:text-3xl">
             {selectedClass
               ? `${selectedClass.class_name} - Students`
               : 'Students by Class'}
@@ -266,7 +266,7 @@ const StudentsPage = () => {
         </div>
         <Button
           onClick={() => handleOpenModal()}
-          className="bg-gradient-to-br from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 px-6 py-3 rounded-lg font-semibold"
+          className="w-full rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-3 font-semibold hover:from-indigo-600 hover:to-violet-600 sm:w-auto"
         >
           <Plus className="w-5 h-5 mr-2" />
           Add Student
@@ -362,8 +362,8 @@ const StudentsPage = () => {
       ) : (
         <>
           {/* Search and Filter Bar */}
-          <div className="flex flex-wrap gap-3 mb-5 items-center">
-            <div className="relative flex-1 min-w-[250px] max-w-[400px]">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative w-full min-w-0 sm:max-w-[400px] sm:flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by name, email, phone, enrollment..."
@@ -402,7 +402,7 @@ const StudentsPage = () => {
               </Button>
             )}
 
-            <span className="ml-auto text-sm text-muted-foreground">
+            <span className="text-sm text-muted-foreground sm:ml-auto">
               {displayedStudents.length} student{displayedStudents.length !== 1 ? 's' : ''} found
             </span>
           </div>
@@ -410,8 +410,8 @@ const StudentsPage = () => {
           {showFilters && (
             <Card className="mb-5">
               <CardContent className="py-4">
-                <div className="flex flex-wrap gap-4">
-                  <div className="min-w-[150px]">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="min-w-0">
                     <Label className="text-xs font-semibold mb-1.5 block">Gender</Label>
                     <Select value={filterGender || 'all'} onValueChange={(val) => setFilterGender(val === 'all' ? '' : val)}>
                       <SelectTrigger>
@@ -428,7 +428,7 @@ const StudentsPage = () => {
                     </Select>
                   </div>
 
-                  <div className="min-w-[150px]">
+                  <div className="min-w-0">
                     <Label className="text-xs font-semibold mb-1.5 block">Status</Label>
                     <Select value={filterStatus || 'all'} onValueChange={(val) => setFilterStatus(val === 'all' ? '' : val)}>
                       <SelectTrigger>
@@ -449,7 +449,7 @@ const StudentsPage = () => {
             </Card>
           )}
 
-          <Card>
+          <Card className="overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -560,7 +560,7 @@ const StudentsPage = () => {
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
-            <div className="p-6 max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto p-4 sm:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">First Name *</Label>
@@ -771,7 +771,7 @@ const StudentsPage = () => {
                 </div>
               </div>
             </div>
-            <DialogFooter className="px-6 py-4">
+            <DialogFooter className="px-4 py-4 sm:px-6">
               <Button type="button" variant="outline" onClick={handleCloseModal} className="rounded-lg">
                 Cancel
               </Button>

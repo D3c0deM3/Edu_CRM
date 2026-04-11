@@ -110,11 +110,11 @@ const SubjectsPage = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Subjects Management</h1>
-        <Button onClick={() => handleOpenModal()}>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Add Subject
         </Button>
       </div>
@@ -131,7 +131,7 @@ const SubjectsPage = () => {
           <CardTitle>All Subjects</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -202,7 +202,7 @@ const SubjectsPage = () => {
             <DialogTitle>{editingId ? 'Edit Subject' : 'Add New Subject'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Subject Name *</Label>
                 <Input
@@ -222,7 +222,7 @@ const SubjectsPage = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <SelectField
                 label="Class"
                 name="class_id"
@@ -247,7 +247,7 @@ const SubjectsPage = () => {
                 placeholder="Select a teacher (optional)"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Total Marks *</Label>
                 <Input

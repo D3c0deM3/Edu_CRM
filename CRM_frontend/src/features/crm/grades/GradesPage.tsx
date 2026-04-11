@@ -379,15 +379,15 @@ const GradesPage = () => {
   const gradedCount = Object.values(studentMarks).filter((m) => m !== '' && !isNaN(Number(m))).length;
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-4 sm:p-6">
       {/* Header & Mode Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold">Grades</h1>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:flex">
           <Button
             variant={pageMode === 'enter' ? 'default' : 'outline'}
             onClick={() => { setPageMode('enter'); setSelectedFolder(null); }}
-            className="flex items-center gap-2"
+            className="flex w-full items-center gap-2 sm:w-auto"
           >
             <GraduationCap className="h-4 w-4" />
             Enter Grades
@@ -395,7 +395,7 @@ const GradesPage = () => {
           <Button
             variant={pageMode === 'history' ? 'default' : 'outline'}
             onClick={() => setPageMode('history')}
-            className="flex items-center gap-2"
+            className="flex w-full items-center gap-2 sm:w-auto"
           >
             <ClipboardList className="h-4 w-4" />
             View History
@@ -496,7 +496,7 @@ const GradesPage = () => {
 
           {/* Stats */}
           {enterClassId && classStudents.length > 0 && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Card className="border-l-4 border-l-blue-500">
                 <CardContent className="p-4 flex items-center gap-3">
                   <Users className="h-8 w-8 text-blue-500" />
@@ -593,12 +593,12 @@ const GradesPage = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-between items-center pt-2">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                   {gradedCount} of {classStudents.length} students graded
                   {!enterSubject && <span className="text-red-500 ml-2"> Select a subject to submit</span>}
                 </p>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:flex">
                   <Button variant="outline" onClick={() => { setEnterClassId(null); setEnterTeacherId(null); setTeacherAutoDetected(false); setStudentMarks({}); setEnterSubject(''); }}>
                     Cancel
                   </Button>
@@ -623,8 +623,8 @@ const GradesPage = () => {
       {/* ===== HISTORY ===== */}
       {pageMode === 'history' && (
         <>
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-4">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               {selectedFolder && (
                 <Button variant="outline" size="sm" onClick={handleBackToFolders}>
                   <ArrowLeft className="h-4 w-4 mr-2" /> Back
@@ -634,13 +634,13 @@ const GradesPage = () => {
                 {selectedFolder ? `Grades  ${selectedFolder.name}` : 'Browse by Student / Class / Teacher'}
               </h2>
             </div>
-            <Button onClick={() => handleOpenModal()}><Plus className="h-4 w-4 mr-2" /> Add Grade</Button>
+            <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" /> Add Grade</Button>
           </div>
 
           {!selectedFolder ? (
             <>
-              <div className="border-b border-border mb-6">
-                <div className="flex space-x-1">
+              <div className="mb-6 overflow-x-auto border-b border-border [-webkit-overflow-scrolling:touch]">
+                <div className="flex min-w-max space-x-1">
                   <Button variant={activeTab === 'students' ? 'default' : 'ghost'} onClick={() => setActiveTab('students')} className="rounded-b-none"><Users className="h-4 w-4 mr-2" />By Students</Button>
                   <Button variant={activeTab === 'classes' ? 'default' : 'ghost'} onClick={() => setActiveTab('classes')} className="rounded-b-none"><BookOpen className="h-4 w-4 mr-2" />By Classes</Button>
                   <Button variant={activeTab === 'teachers' ? 'default' : 'ghost'} onClick={() => setActiveTab('teachers')} className="rounded-b-none"><User className="h-4 w-4 mr-2" />By Teachers</Button>
@@ -763,7 +763,7 @@ const GradesPage = () => {
                   </div>
                 </div>
               )}
-              <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-hidden rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>

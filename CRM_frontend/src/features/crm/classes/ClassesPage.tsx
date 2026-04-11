@@ -182,10 +182,10 @@ const ClassesPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto py-6 px-4">
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Classes Management</h1>
-        <Button onClick={() => handleOpenModal()}>
+    <div className="mx-auto max-w-7xl px-0 py-2 sm:px-4 sm:py-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold sm:text-3xl">Classes Management</h1>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add Class
         </Button>
@@ -249,12 +249,12 @@ const ClassesPage = () => {
                   </p>
                 </div>
               </CardContent>
-              <div className="px-4 pb-4 pt-0 flex justify-between items-center">
+              <div className="flex flex-col gap-2 px-4 pb-4 pt-0 sm:flex-row sm:items-center sm:justify-between">
                 <Button variant="ghost" size="sm" onClick={() => handleViewDetails(cls)}>
                   <Info className="mr-1 h-4 w-4" />
                   Details
                 </Button>
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-1">
                   <Button variant="ghost" size="sm" onClick={() => handleOpenModal(cls)}>
                     <Pencil className="mr-1 h-4 w-4" />
                     Edit
@@ -300,7 +300,7 @@ const ClassesPage = () => {
                 onChange={(e) => setFormData({ ...formData, class_code: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="level">Level</Label>
                 <Input
@@ -310,9 +310,9 @@ const ClassesPage = () => {
                   onChange={(e) => setFormData({ ...formData, level: Number(e.target.value) })}
                 />
               </div>
-              <div />
+              <div className="hidden sm:block" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="capacity">Capacity *</Label>
                 <Input
@@ -332,7 +332,7 @@ const ClassesPage = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="payment_amount">Payment Amount</Label>
                 <Input
@@ -370,7 +370,7 @@ const ClassesPage = () => {
               {/* Days Selection */}
               <div className="mb-3">
                 <p className="text-xs font-semibold mb-2">Select Class Days</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {weekDays.map((day) => (
                     <label key={day} className="flex items-center gap-2 text-sm cursor-pointer">
                       <Switch

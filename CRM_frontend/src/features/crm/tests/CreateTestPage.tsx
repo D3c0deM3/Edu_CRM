@@ -390,12 +390,12 @@ const CreateTestPage = () => {
       )}
 
       {/* Questions Section */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold">Questions</h3>
           <p className="text-sm text-muted-foreground">Total Marks: {calculateTotalMarks()}</p>
         </div>
-        <Button onClick={addQuestion}>
+        <Button onClick={addQuestion} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Question
         </Button>
@@ -690,7 +690,7 @@ const CreateTestPage = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <button
@@ -753,7 +753,7 @@ const CreateTestPage = () => {
 
       {/* Content */}
       <Card className="mb-6">
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           {getStepContent(activeStep)}
         </CardContent>
       </Card>

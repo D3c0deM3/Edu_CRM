@@ -279,7 +279,7 @@ const TeacherDetailPage = () => {
 
   if (!teacher) {
     return (
-      <div className="p-6 text-center">
+      <div className="p-4 text-center sm:p-6">
         <Alert variant="destructive">
           <AlertDescription>Teacher not found</AlertDescription>
         </Alert>
@@ -315,7 +315,7 @@ const TeacherDetailPage = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button
@@ -398,7 +398,7 @@ const TeacherDetailPage = () => {
             </TabsTrigger>
           </TabsList>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {/* Tab: Information */}
             <TabsContent value="info">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -609,7 +609,7 @@ const TeacherDetailPage = () => {
             </div>
           </DialogHeader>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Select Class</Label>
@@ -704,7 +704,7 @@ const TeacherDetailPage = () => {
             )}
           </div>
 
-          <DialogFooter className="p-6 pt-0">
+          <DialogFooter className="px-4 pb-4 pt-0 sm:px-6 sm:pb-6">
             <Button variant="outline" className="rounded-lg" onClick={handleCloseGradeModal}>
               Cancel
             </Button>

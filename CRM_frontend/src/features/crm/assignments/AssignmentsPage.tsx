@@ -213,10 +213,10 @@ const AssignmentsPage = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
           {selectedFolder && (
             <Button variant="ghost" size="sm" onClick={handleBackToFolders}>
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
@@ -228,7 +228,7 @@ const AssignmentsPage = () => {
               : 'Assignments Management'}
           </h1>
         </div>
-        <Button onClick={() => handleOpenModal()}>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Add Assignment
         </Button>
       </div>
@@ -242,8 +242,8 @@ const AssignmentsPage = () => {
       {!selectedFolder ? (
         <>
           {/* Tab Navigation */}
-          <div className="border-b">
-            <div className="flex gap-1">
+          <div className="overflow-x-auto border-b [-webkit-overflow-scrolling:touch]">
+            <div className="flex min-w-max gap-1">
               <button
                 className={cn(
                   'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors',
@@ -385,7 +385,7 @@ const AssignmentsPage = () => {
         <>
           {/* Search and Filter Bar */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[200px] max-w-md">
+            <div className="relative w-full min-w-0 sm:max-w-md sm:flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
@@ -559,7 +559,7 @@ const AssignmentsPage = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <SelectField
                 label="Class (Optional - leave empty for personal task)"
                 name="class_id"
@@ -581,7 +581,7 @@ const AssignmentsPage = () => {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Submission Date *</Label>
                 <Input

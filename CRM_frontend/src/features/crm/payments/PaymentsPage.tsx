@@ -360,10 +360,10 @@ const PaymentsPage = () => {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           {selectedFolder && (
             <Button variant="outline" size="sm" onClick={handleBackToFolders}>
               <ArrowLeft className="h-4 w-4 mr-2" /> Back
@@ -373,7 +373,7 @@ const PaymentsPage = () => {
             {selectedFolder ? `${selectedFolder.name} — Payments` : 'Payments Management'}
           </h1>
         </div>
-        <Button variant="outline" onClick={() => handleOpenModal()}>
+        <Button variant="outline" onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" /> Full Form
         </Button>
       </div>
@@ -383,10 +383,10 @@ const PaymentsPage = () => {
       {!selectedFolder ? (
         <>
           {/* Tab Navigation */}
-          <div className="border-b border-border mb-6">
-            <div className="flex space-x-1">
+          <div className="mb-6 overflow-x-auto border-b border-border [-webkit-overflow-scrolling:touch]">
+            <div className="flex min-w-max space-x-1">
               {([['students', <Users className="h-4 w-4" />, 'By Students'], ['classes', <BookOpen className="h-4 w-4" />, 'By Classes'], ['teachers', <User className="h-4 w-4" />, 'By Teachers']] as const).map(([tab, icon, label]) => (
-                <Button key={tab} variant={activeTab === tab ? 'default' : 'ghost'} onClick={() => setActiveTab(tab)} className="rounded-b-none gap-2">
+                <Button key={tab} variant={activeTab === tab ? 'default' : 'ghost'} onClick={() => setActiveTab(tab)} className="gap-2 rounded-b-none">
                   {icon}{label}
                 </Button>
               ))}
@@ -506,7 +506,7 @@ const PaymentsPage = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Month selector */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
                     <div className="flex-1 text-center">
                       <p className="font-semibold text-sm">{MONTH_NAMES[quickMonth]} {quickYear}</p>
@@ -623,14 +623,14 @@ const PaymentsPage = () => {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 pt-1">
+                  <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
                     <Button
                       onClick={() => {
                         if (isMulti && !quickStudentId) return;
                         handleQuickPay();
                       }}
                       disabled={!quickAmount || quickSubmitting || (isMulti && !quickStudentId)}
-                      className="gap-2"
+                      className="w-full gap-2 sm:w-auto"
                     >
                       {quickSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
                       Record Payment
@@ -660,7 +660,7 @@ const PaymentsPage = () => {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-2 gap-3 p-4 bg-muted/50 rounded-lg mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-3 rounded-lg bg-muted/50 p-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label className="text-xs">Status</Label>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -684,7 +684,7 @@ const PaymentsPage = () => {
             </div>
           )}
 
-          <div className="border rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -739,7 +739,7 @@ const PaymentsPage = () => {
             <DialogTitle>{editingId ? 'Edit Payment' : 'Add Payment'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <SelectField label="Student *" name="student_id" value={formData.student_id || ''} onChange={(v) => {
                 const sid = Number(v);
                 const s = students.find((s) => (s.student_id || s.id) === sid);
@@ -755,7 +755,7 @@ const PaymentsPage = () => {
                 placeholder={formData.student_id ? (getClassOptionsForStudent(formData.student_id).length === 0 ? 'No class enrolled' : 'Select class') : 'Select student first'}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Date *</Label>
                 <Input type="date" required value={formData.payment_date || ''} onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })} />
@@ -767,11 +767,11 @@ const PaymentsPage = () => {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <SelectField label="Method *" name="payment_method" value={formData.payment_method || ''} onChange={(v) => setFormData({ ...formData, payment_method: v })} options={paymentMethodOptions} required placeholder="Select method" />
               <SelectField label="Type *" name="payment_type" value={formData.payment_type || ''} onChange={(v) => setFormData({ ...formData, payment_type: v })} options={paymentTypeOptions} required placeholder="Select type" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <SelectField label="Status *" name="payment_status" value={formData.payment_status || ''} onChange={(v) => setFormData({ ...formData, payment_status: v })} options={paymentStatusOptions} required placeholder="Select status" />
               <div className="space-y-1.5">
                 <Label>Receipt Number *</Label>

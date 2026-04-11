@@ -150,12 +150,21 @@
   * {
     border-color: hsl(var(--border));
   }
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  }
+  #root {
+    min-width: 0;
   }
   /* Modal-specific input overrides for better contrast */
   .modal input,
@@ -171,6 +180,14 @@
     background-color: hsl(var(--card));
     color: hsl(var(--card-foreground));
     border-color: hsl(var(--border));
+  }
+}
+
+@media (max-width: 640px) {
+  .Toastify__toast-container {
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
   }
 }
 

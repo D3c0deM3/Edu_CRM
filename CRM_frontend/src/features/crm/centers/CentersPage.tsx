@@ -96,10 +96,10 @@ const CentersPage = () => {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto py-6 px-4">
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Centers Management</h1>
-        <Button onClick={() => handleOpenModal()}>
+    <div className="mx-auto max-w-7xl px-0 py-2 sm:px-4 sm:py-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold sm:text-3xl">Centers Management</h1>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add Center
         </Button>
