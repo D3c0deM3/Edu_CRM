@@ -156,6 +156,8 @@ const getQrSessionByToken = async (sessionToken: string) => {
     `
       SELECT
         s.*,
+        (s.is_active = TRUE AND s.expires_at > LOCALTIMESTAMP) AS active,
+        GREATEST(EXTRACT(EPOCH FROM (s.expires_at - LOCALTIMESTAMP)), 0) AS seconds_until_expiry,
         c.class_name,
         c.class_code,
         c.room_number,
@@ -593,8 +595,6 @@ exports.createQrAttendanceSession = async (req: any, res: any) => {
     }
 
     const sessionToken = cryptoModule.randomBytes(24).toString('hex');
-    const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
-
     await db.query(
       `
         UPDATE attendance_qr_sessions
@@ -623,7 +623,20 @@ exports.createQrAttendanceSession = async (req: any, res: any) => {
           location_accuracy_meters,
           location_radius_meters
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          LOCALTIMESTAMP + ($7::int * INTERVAL '1 minute'),
+          $8,
+          $9,
+          $10,
+          $11,
+          $12
+        )
         RETURNING *
       `,
       [
@@ -633,7 +646,7 @@ exports.createQrAttendanceSession = async (req: any, res: any) => {
         classId,
         attendanceDate,
         classRecord.room_number || null,
-        expiresAt.toISOString(),
+        expiryMinutes,
         locationRequired,
         locationLatitude,
         locationLongitude,
@@ -693,13 +706,15 @@ exports.getQrAttendanceSessions = async (req: any, res: any) => {
 
     if (req.query.active_only !== 'false') {
       filters.push('s.is_active = TRUE');
-      filters.push('s.expires_at > CURRENT_TIMESTAMP');
+      filters.push('s.expires_at > LOCALTIMESTAMP');
     }
 
     const result = await db.query(
       `
         SELECT
           s.*,
+          (s.is_active = TRUE AND s.expires_at > LOCALTIMESTAMP) AS active,
+          GREATEST(EXTRACT(EPOCH FROM (s.expires_at - LOCALTIMESTAMP)), 0) AS seconds_until_expiry,
           c.class_name,
           c.class_code,
           t.first_name AS teacher_first_name,
@@ -746,8 +761,7 @@ exports.getQrAttendanceSession = async (req: any, res: any) => {
       return res.status(403).json({ error: 'You can only view QR sessions for your own center.' });
     }
 
-    const expiresAt = new Date(session.expires_at);
-    const active = Boolean(session.is_active) && expiresAt.getTime() > Date.now();
+    const active = Boolean(session.active);
 
     const sessionData = {
       session_id: session.session_id,
@@ -886,7 +900,7 @@ exports.checkInWithQrAttendanceSession = async (req: any, res: any) => {
       return res.status(404).json({ error: 'QR attendance session not found' });
     }
 
-    if (!session.is_active || new Date(session.expires_at).getTime() <= Date.now()) {
+    if (!session.active) {
       return res.status(400).json({ error: 'This QR attendance session has expired or been closed.' });
     }
 
