@@ -195,8 +195,9 @@ const hydrateQrSession = (raw: any): QrSessionInfo => ({
   created_at: raw.created_at,
   expires_at: raw.expires_at,
   active:
-    Boolean(raw.active ?? raw.is_active) &&
-    new Date(raw.expires_at).getTime() > Date.now(),
+    raw.active !== undefined
+      ? Boolean(raw.active)
+      : Boolean(raw.is_active) && new Date(raw.expires_at).getTime() > Date.now(),
   location_required: Boolean(raw.location_required),
   location_radius_meters: raw.location_radius_meters,
 });
