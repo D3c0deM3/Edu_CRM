@@ -234,6 +234,82 @@ const upsertAttendanceRecord = async (
   return inserted.rows[0];
 };
 
+const validateAttendanceScope = async (
+  client: any,
+  req: any,
+  record: {
+    student_id: number;
+    teacher_id: number;
+    class_id: number;
+  }
+) => {
+  const classResult = await client.query(
+    `
+      SELECT class_id, center_id, teacher_id, class_name
+      FROM classes
+      WHERE class_id = $1
+    `,
+    [record.class_id]
+  );
+
+  const classRecord = classResult.rows[0];
+  if (!classRecord) {
+    return { valid: false, status: 404, error: 'Class not found' };
+  }
+
+  if (req.user?.userType !== 'student' && Number(classRecord.center_id) !== Number(req.user?.center_id)) {
+    return { valid: false, status: 403, error: 'This class is outside your center.' };
+  }
+
+  if (req.user?.userType === 'teacher' && Number(classRecord.teacher_id) !== Number(req.user.id)) {
+    return { valid: false, status: 403, error: 'You can only manage attendance for your own classes.' };
+  }
+
+  if (classRecord.teacher_id && Number(record.teacher_id) !== Number(classRecord.teacher_id)) {
+    return { valid: false, status: 400, error: 'teacher_id must match the class assigned teacher.' };
+  }
+
+  const studentResult = await client.query(
+    `
+      SELECT student_id, center_id, class_id
+      FROM students
+      WHERE student_id = $1
+    `,
+    [record.student_id]
+  );
+
+  const student = studentResult.rows[0];
+  if (!student) {
+    return { valid: false, status: 404, error: 'Student not found' };
+  }
+
+  if (Number(student.center_id) !== Number(classRecord.center_id)) {
+    return { valid: false, status: 400, error: 'Student and class must belong to the same center.' };
+  }
+
+  if (Number(student.class_id) !== Number(record.class_id)) {
+    return { valid: false, status: 400, error: 'Student is not enrolled in this class.' };
+  }
+
+  return { valid: true, classRecord };
+};
+
+const canAccessAttendanceRecord = (req: any, record: any): boolean => {
+  if (req.user?.userType === 'student') {
+    return Number(record.student_id) === Number(req.user.id);
+  }
+
+  if (req.user?.userType === 'teacher') {
+    return Number(record.teacher_id) === Number(req.user.id);
+  }
+
+  if (req.user?.userType === 'superuser') {
+    return Number(record.center_id) === Number(req.user.center_id);
+  }
+
+  return false;
+};
+
 exports.getAllAttendance = async (req: any, res: any) => {
   try {
     const center_id = req.user?.center_id;
@@ -241,10 +317,19 @@ exports.getAllAttendance = async (req: any, res: any) => {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
     }
 
+    const filters = ['c.center_id = $1'];
+    const values: any[] = [center_id];
+
+    if (req.user?.userType === 'teacher') {
+      values.push(req.user.id);
+      filters.push(`a.teacher_id = $${values.length}`);
+    }
+
     const result = await db.query(
       `
         SELECT
           a.*,
+          c.center_id,
           c.class_name,
           c.class_code,
           s.first_name AS student_first_name,
@@ -255,10 +340,10 @@ exports.getAllAttendance = async (req: any, res: any) => {
         JOIN classes c ON a.class_id = c.class_id
         JOIN students s ON a.student_id = s.student_id
         JOIN teachers t ON a.teacher_id = t.teacher_id
-        WHERE c.center_id = $1
+        WHERE ${filters.join(' AND ')}
         ORDER BY a.attendance_date DESC, a.attendance_id DESC
       `,
-      [center_id]
+      values
     );
 
     res.json(result.rows);
@@ -275,6 +360,7 @@ exports.getAttendanceById = async (req: any, res: any) => {
       `
         SELECT
           a.*,
+          c.center_id,
           c.class_name,
           c.class_code,
           s.first_name AS student_first_name,
@@ -292,6 +378,10 @@ exports.getAttendanceById = async (req: any, res: any) => {
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Attendance not found' });
+    }
+
+    if (!canAccessAttendanceRecord(req, result.rows[0])) {
+      return res.status(403).json({ error: 'You cannot view this attendance record.' });
     }
 
     res.json(result.rows[0]);
@@ -329,6 +419,16 @@ exports.createAttendance = async (req: any, res: any) => {
       return res.status(400).json({ error: 'teacher_id is required' });
     }
 
+    const scope = await validateAttendanceScope(client, req, {
+      student_id: Number(student_id),
+      teacher_id: Number(resolvedTeacherId),
+      class_id: Number(class_id),
+    });
+
+    if (!scope.valid) {
+      return res.status(scope.status || 400).json({ error: scope.error });
+    }
+
     await client.query('BEGIN');
     const attendance = await upsertAttendanceRecord(client, {
       student_id: Number(student_id),
@@ -358,6 +458,24 @@ exports.updateAttendance = async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { status, remarks } = req.body;
+    const existingResult = await db.query(
+      `
+        SELECT a.*, c.center_id
+        FROM attendance a
+        JOIN classes c ON c.class_id = a.class_id
+        WHERE a.attendance_id = $1
+      `,
+      [id]
+    );
+
+    if (existingResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Attendance not found' });
+    }
+
+    if (!canAccessAttendanceRecord(req, existingResult.rows[0])) {
+      return res.status(403).json({ error: 'You cannot update this attendance record.' });
+    }
+
     const result = await db.query(
       `
         UPDATE attendance
@@ -394,6 +512,29 @@ exports.getAttendanceByStudent = async (req: any, res: any) => {
       return res.status(403).json({ error: 'You can only view your own attendance records.' });
     }
 
+    const studentAccess = await db.query(
+      `
+        SELECT s.student_id, s.center_id, s.class_id, c.teacher_id
+        FROM students s
+        LEFT JOIN classes c ON c.class_id = s.class_id
+        WHERE s.student_id = $1
+      `,
+      [parsedStudentId]
+    );
+
+    if (studentAccess.rows.length === 0) {
+      return res.json([]);
+    }
+
+    const student = studentAccess.rows[0];
+    if (req.user?.userType === 'superuser' && Number(student.center_id) !== Number(req.user.center_id)) {
+      return res.status(403).json({ error: 'You can only view students from your own center.' });
+    }
+
+    if (req.user?.userType === 'teacher' && Number(student.teacher_id) !== Number(req.user.id)) {
+      return res.status(403).json({ error: 'You can only view attendance for students in your classes.' });
+    }
+
     const result = await db.query(
       `
         SELECT
@@ -423,8 +564,30 @@ exports.getAttendanceByClass = async (req: any, res: any) => {
     const { classId } = req.params;
     const parsedClassId = Number(classId);
 
+    const classAccess = await db.query(
+      `
+        SELECT class_id, center_id, teacher_id
+        FROM classes
+        WHERE class_id = $1
+      `,
+      [parsedClassId]
+    );
+
+    if (classAccess.rows.length === 0) {
+      return res.json([]);
+    }
+
+    const classRecord = classAccess.rows[0];
     if (req.user?.userType === 'student' && req.user.class_id !== parsedClassId) {
       return res.status(403).json({ error: 'You can only view attendance for your own class.' });
+    }
+
+    if (req.user?.userType === 'teacher' && Number(classRecord.teacher_id) !== Number(req.user.id)) {
+      return res.status(403).json({ error: 'You can only view attendance for your own classes.' });
+    }
+
+    if (req.user?.userType === 'superuser' && Number(classRecord.center_id) !== Number(req.user.center_id)) {
+      return res.status(403).json({ error: 'You can only view attendance for classes in your own center.' });
     }
 
     const result = await db.query(
@@ -455,11 +618,25 @@ exports.getAttendanceByClass = async (req: any, res: any) => {
 exports.deleteAttendance = async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    const result = await db.query('DELETE FROM attendance WHERE attendance_id = $1 RETURNING *', [id]);
+    const existingResult = await db.query(
+      `
+        SELECT a.*, c.center_id
+        FROM attendance a
+        JOIN classes c ON c.class_id = a.class_id
+        WHERE a.attendance_id = $1
+      `,
+      [id]
+    );
 
-    if (result.rows.length === 0) {
+    if (existingResult.rows.length === 0) {
       return res.status(404).json({ error: 'Attendance record not found' });
     }
+
+    if (!canAccessAttendanceRecord(req, existingResult.rows[0])) {
+      return res.status(403).json({ error: 'You cannot delete this attendance record.' });
+    }
+
+    const result = await db.query('DELETE FROM attendance WHERE attendance_id = $1 RETURNING *', [id]);
 
     res.json({ message: 'Attendance record deleted successfully', attendance: result.rows[0] });
   } catch (error: any) {
@@ -506,6 +683,18 @@ exports.createBulkAttendance = async (req: any, res: any) => {
         throw new Error('teacher_id is required for each attendance record');
       }
 
+      const scope = await validateAttendanceScope(client, req, {
+        student_id: Number(student_id),
+        teacher_id: Number(resolvedTeacherId),
+        class_id: Number(class_id),
+      });
+
+      if (!scope.valid) {
+        const scopeError: any = new Error(scope.error);
+        scopeError.status = scope.status || 400;
+        throw scopeError;
+      }
+
       const attendance = await upsertAttendanceRecord(client, {
         student_id: Number(student_id),
         teacher_id: Number(resolvedTeacherId),
@@ -532,7 +721,7 @@ exports.createBulkAttendance = async (req: any, res: any) => {
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Database error:', error);
-    res.status(500).json({ error: 'Failed to create bulk attendance', details: error.message || error.toString() });
+    res.status(error.status || 500).json({ error: error.status ? error.message : 'Failed to create bulk attendance', details: error.message || error.toString() });
   } finally {
     client.release();
   }
@@ -908,6 +1097,61 @@ exports.checkInWithQrAttendanceSession = async (req: any, res: any) => {
       return res.status(403).json({ error: 'This QR code is not for your class.' });
     }
 
+    const priorCheckIn = await db.query(
+      `
+        SELECT
+          qc.*,
+          a.attendance_id,
+          a.student_id,
+          a.teacher_id,
+          a.class_id,
+          a.attendance_date,
+          a.status,
+          a.remarks
+        FROM attendance_qr_checkins qc
+        LEFT JOIN attendance a ON a.attendance_id = qc.attendance_id
+        WHERE qc.session_id = $1 AND qc.student_id = $2
+      `,
+      [session.session_id, req.user.id]
+    );
+
+    if (priorCheckIn.rows.length > 0) {
+      const existing = priorCheckIn.rows[0];
+      return res.json({
+        message: 'Attendance already checked in successfully',
+        already_checked_in: true,
+        attendance: existing.attendance_id
+          ? {
+              attendance_id: existing.attendance_id,
+              student_id: existing.student_id,
+              teacher_id: existing.teacher_id,
+              class_id: existing.class_id,
+              attendance_date: existing.attendance_date,
+              status: existing.status,
+              remarks: existing.remarks,
+            }
+          : null,
+        check_in: {
+          qr_checkin_id: existing.qr_checkin_id,
+          session_id: existing.session_id,
+          student_id: existing.student_id,
+          attendance_id: existing.attendance_id,
+          checked_in_at: existing.checked_in_at,
+          latitude: existing.latitude,
+          longitude: existing.longitude,
+          accuracy_meters: existing.accuracy_meters,
+          distance_meters: existing.distance_meters,
+          location_validated: existing.location_validated,
+        },
+        session: {
+          session_id: session.session_id,
+          class_id: session.class_id,
+          class_name: session.class_name,
+          attendance_date: session.attendance_date,
+        },
+      });
+    }
+
     const latitude = toNullableNumber(req.body.latitude);
     const longitude = toNullableNumber(req.body.longitude);
     const accuracyMeters = toNullableNumber(req.body.accuracy_meters);
@@ -1009,15 +1253,7 @@ exports.checkInWithQrAttendanceSession = async (req: any, res: any) => {
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (session_id, student_id)
-        DO UPDATE SET
-          attendance_id = EXCLUDED.attendance_id,
-          checked_in_at = CURRENT_TIMESTAMP,
-          latitude = EXCLUDED.latitude,
-          longitude = EXCLUDED.longitude,
-          accuracy_meters = EXCLUDED.accuracy_meters,
-          distance_meters = EXCLUDED.distance_meters,
-          location_validated = EXCLUDED.location_validated,
-          device_info = EXCLUDED.device_info
+        DO NOTHING
         RETURNING *
       `,
       [
@@ -1034,10 +1270,35 @@ exports.checkInWithQrAttendanceSession = async (req: any, res: any) => {
     );
 
     await client.query('COMMIT');
+
+    if (checkInResult.rows.length === 0) {
+      const existingCheckIn = await db.query(
+        `
+          SELECT *
+          FROM attendance_qr_checkins
+          WHERE session_id = $1 AND student_id = $2
+        `,
+        [session.session_id, req.user.id]
+      );
+
+      return res.json({
+        message: 'Attendance already checked in successfully',
+        already_checked_in: true,
+        attendance: attendanceRecord,
+        check_in: existingCheckIn.rows[0] || null,
+        session: {
+          session_id: session.session_id,
+          class_id: session.class_id,
+          class_name: session.class_name,
+          attendance_date: session.attendance_date,
+        },
+      });
+    }
+
     void notifyParentsAboutAttendance(attendanceRecord, {
       source: 'qr',
       exactTimestamp: checkInResult.rows[0]?.checked_in_at || new Date(),
-      eventKey: `attendance-qr:${attendanceRecord.attendance_id}:${checkInResult.rows[0]?.checked_in_at || ''}`,
+      eventKey: `attendance-qr:${session.session_id}:${attendanceRecord.attendance_id}`,
     });
 
     res.json({

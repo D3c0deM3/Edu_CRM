@@ -49,6 +49,58 @@ router_att.post(
 
 /**
  * @swagger
+ * /attendance/student/{studentId}:
+ *   get:
+ *     summary: Get attendance records by student ID
+ *     tags: [Attendance]
+ *     parameters:
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of attendance records for student
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Attendance'
+ *       404:
+ *         description: Student not found
+ */
+router_att.get('/student/:studentId', attendanceController.getAttendanceByStudent);
+
+/**
+ * @swagger
+ * /attendance/class/{classId}:
+ *   get:
+ *     summary: Get attendance records by class ID
+ *     tags: [Attendance]
+ *     parameters:
+ *       - in: path
+ *         name: classId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of attendance records for class
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Attendance'
+ *       404:
+ *         description: Class not found
+ */
+router_att.get('/class/:classId', attendanceController.getAttendanceByClass);
+
+/**
+ * @swagger
  * /attendance/{id}:
  *   get:
  *     summary: Get attendance record by ID
@@ -141,58 +193,6 @@ router_att.post('/bulk', requireRole('superuser', 'teacher'), attendanceControll
  *         description: Attendance record not found
  */
 router_att.put('/:id', requireRole('superuser', 'teacher'), attendanceController.updateAttendance);
-
-/**
- * @swagger
- * /attendance/student/{studentId}:
- *   get:
- *     summary: Get attendance records by student ID
- *     tags: [Attendance]
- *     parameters:
- *       - in: path
- *         name: studentId
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: List of attendance records for student
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Attendance'
- *       404:
- *         description: Student not found
- */
-router_att.get('/student/:studentId', attendanceController.getAttendanceByStudent);
-
-/**
- * @swagger
- * /attendance/class/{classId}:
- *   get:
- *     summary: Get attendance records by class ID
- *     tags: [Attendance]
- *     parameters:
- *       - in: path
- *         name: classId
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: List of attendance records for class
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Attendance'
- *       404:
- *         description: Class not found
- */
-router_att.get('/class/:classId', attendanceController.getAttendanceByClass);
 
 /**
  * @swagger

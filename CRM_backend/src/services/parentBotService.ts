@@ -165,8 +165,10 @@ const BOT_TEXT = {
     activeChildSet: 'Tanlangan farzand: {name}.\n\n{summary}',
     attendanceUpdate: '{name} uchun davomat yangilandi',
     status: 'Holat',
+    attendanceDate: 'Dars sanasi',
     markedAt: 'Belgilangan vaqt',
     teacher: "O'qituvchi",
+    room: 'Xona',
     notes: 'Izoh',
     newGrade: '{name} uchun yangi baho qo‘yildi',
     gradeUpdated: '{name} uchun baho yangilandi',
@@ -243,8 +245,10 @@ const BOT_TEXT = {
     activeChildSet: 'Активный ребенок: {name}.\n\n{summary}',
     attendanceUpdate: 'Обновление посещаемости для {name}',
     status: 'Статус',
+    attendanceDate: 'Дата занятия',
     markedAt: 'Отмечено в',
     teacher: 'Учитель',
+    room: 'Кабинет',
     notes: 'Примечание',
     newGrade: 'Добавлена новая оценка для {name}',
     gradeUpdated: 'Оценка обновлена для {name}',
@@ -339,6 +343,17 @@ const formatTashkentDateTime = (
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+  });
+
+const formatTashkentDate = (
+  value: string | Date,
+  language: ParentLanguage = 'uz'
+): string =>
+  new Date(value).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'uz-UZ', {
+    timeZone: 'Asia/Tashkent',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
 
 const buildReplyKeyboard = (rows: Array<Array<string | { text: string; request_contact?: boolean }>>) => ({
@@ -1106,6 +1121,7 @@ export const notifyParentsAboutAttendance = async (
           s.parent_telegram_language,
           c.class_name,
           c.class_code,
+          c.room_number,
           t.first_name AS teacher_first_name,
           t.last_name AS teacher_last_name
         FROM attendance a
@@ -1129,14 +1145,19 @@ export const notifyParentsAboutAttendance = async (
       record.teacher_first_name && record.teacher_last_name
         ? `${record.teacher_first_name} ${record.teacher_last_name}`
         : text.teacher;
+    const classLabel = record.class_name
+      ? `${record.class_name}${record.class_code ? ` (${record.class_code})` : ''}`
+      : text.noClassAssigned;
     const message = [
       interpolate(text.attendanceUpdate, {
         name: `${record.student_first_name} ${record.student_last_name}`,
       }),
       `${text.status}: ${translateAttendanceStatus(record.status, language)}`,
-      `${text.class}: ${record.class_name || text.noClassAssigned}`,
+      `${text.class}: ${classLabel}`,
+      `${text.attendanceDate}: ${formatTashkentDate(record.attendance_date, language)}`,
       `${text.markedAt}: ${exactTime}`,
       `${text.teacher}: ${teacherName}`,
+      record.room_number ? `${text.room}: ${record.room_number}` : '',
       record.remarks ? `${text.notes}: ${record.remarks}` : '',
     ]
       .filter(Boolean)
@@ -1152,6 +1173,8 @@ export const notifyParentsAboutAttendance = async (
         attendance_id: record.attendance_id,
         status: record.status,
         attendance_date: record.attendance_date,
+        class_name: record.class_name,
+        class_code: record.class_code,
         source: options.source || 'manual',
       }
     );
