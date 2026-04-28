@@ -27,6 +27,11 @@ const PORT = process.env.PORT || 3000;
 const corsWhitelist = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:1420',
+  'http://127.0.0.1:1420',
+  'tauri://localhost',
+  'http://tauri.localhost',
+  'https://tauri.localhost',
   'https://edu-crm-psi.vercel.app',
   'https://www.edu-crm-psi.vercel.app',
 ];
