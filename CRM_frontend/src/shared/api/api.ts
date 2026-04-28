@@ -258,4 +258,5 @@ export const desktopAdminAPI = {
   getUsers: () => desktopAdminClient.get('/desktop-auth/admin/users'),
   activateUser: (id: number) => desktopAdminClient.post(`/desktop-auth/admin/users/${id}/activate`),
   deactivateUser: (id: number) => desktopAdminClient.post(`/desktop-auth/admin/users/${id}/deactivate`),
+  deleteUser: (id: number) => desktopAdminClient.delete(`/desktop-auth/admin/users/${id}`),
 };

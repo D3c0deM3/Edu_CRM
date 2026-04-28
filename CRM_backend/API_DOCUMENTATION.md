@@ -699,6 +699,7 @@ The admin panel lets you:
 - Track activation date, expiration date, days used, and days remaining.
 - Activate or renew a user for another 30 days.
 - Deactivate a user.
+- Delete a user permanently.
 
 ### Desktop Admin API Login
 - **POST** `/desktop-auth/admin/login`
@@ -741,6 +742,10 @@ Authorization: Bearer desktop_admin_jwt_token
 - **POST** `/desktop-auth/admin/users/:id/deactivate`
 - Sets `status` to `inactive`.
 - The user will not be allowed to log in.
+
+### Delete Desktop User
+- **DELETE** `/desktop-auth/admin/users/:id`
+- Permanently deletes the desktop app user account.
 
 ### Desktop Auth Errors
 - **400** validation failed, for example missing username/password or short password during registration.

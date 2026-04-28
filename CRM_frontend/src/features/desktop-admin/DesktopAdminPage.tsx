@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
   UserRoundCheck,
   UserRoundX,
   XCircle,
@@ -140,6 +141,26 @@ const DesktopAdminPage = () => {
         await desktopAdminAPI.deactivateUser(user.desktop_user_id);
       }
       await loadUsers();
+    } catch (error: any) {
+      showToast.error(handleApiError(error));
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const deleteUser = async (user: DesktopUser) => {
+    const confirmed = window.confirm(`Delete ${user.username}? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setActionId(user.desktop_user_id);
+    try {
+      await desktopAdminAPI.deleteUser(user.desktop_user_id);
+      setUsers((currentUsers) =>
+        currentUsers.filter((currentUser) => currentUser.desktop_user_id !== user.desktop_user_id)
+      );
+      showToast.success('Desktop app user deleted');
     } catch (error: any) {
       showToast.error(handleApiError(error));
     } finally {
@@ -347,6 +368,15 @@ const DesktopAdminPage = () => {
                             >
                               <UserRoundX className="mr-1 h-3.5 w-3.5" />
                               Inactive
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteUser(user)}
+                              disabled={actionId === user.desktop_user_id}
+                            >
+                              <Trash2 className="mr-1 h-3.5 w-3.5" />
+                              Delete
                             </Button>
                           </div>
                         </td>

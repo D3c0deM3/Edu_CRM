@@ -164,6 +164,28 @@ router_desktop_auth.post('/admin/users/:id/activate', requireDesktopAdmin, deskt
  */
 router_desktop_auth.post('/admin/users/:id/deactivate', requireDesktopAdmin, desktopAuthController.deactivateUser);
 
+/**
+ * @swagger
+ * /desktop-auth/admin/users/{id}:
+ *   delete:
+ *     summary: Delete a desktop app user
+ *     tags: [Desktop Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Desktop app user deleted
+ *       404:
+ *         description: Desktop app user not found
+ */
+router_desktop_auth.delete('/admin/users/:id', requireDesktopAdmin, desktopAuthController.deleteUser);
+
 module.exports = router_desktop_auth;
 
 export {};

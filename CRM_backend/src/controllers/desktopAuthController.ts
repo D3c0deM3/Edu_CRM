@@ -378,4 +378,30 @@ exports.deactivateUser = async (req: any, res: any) => {
   }
 };
 
+exports.deleteUser = async (req: any, res: any) => {
+  try {
+    await ensureDesktopAuthSchema();
+
+    const { id } = req.params;
+    const result = await pool.query(
+      `DELETE FROM desktop_app_users
+       WHERE desktop_user_id = $1
+       RETURNING ${desktopUserSelect}`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Desktop app user not found' });
+    }
+
+    res.json({
+      message: 'Desktop app user deleted',
+      user: sanitizeDesktopUser(result.rows[0]),
+    });
+  } catch (error: any) {
+    console.error('Desktop admin delete error:', error);
+    res.status(500).json({ error: 'Failed to delete desktop app user', details: error.message || error.toString() });
+  }
+};
+
 export {};
