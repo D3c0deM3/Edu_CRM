@@ -620,21 +620,24 @@ This module is separate from the CRM data. It uses the `desktop_app_users` table
 }
 ```
 - `email` is optional.
-- New users are created with `status: "active"` and `subscription_activated_at` set to the current time.
+- New users are created with `status: "inactive"` and `subscription_activated_at: null`.
+- A desktop app user cannot log in until the desktop admin activates the subscription.
 - **Response 201**:
 ```json
 {
-  "message": "Registration successful",
-  "token": "jwt_token_here",
+  "message": "Registration successful. Account is inactive until an admin activates the subscription.",
   "user": {
     "desktop_user_id": 1,
     "username": "desktop_user",
     "email": "desktop@example.com",
-    "status": "active",
-    "subscription_activated_at": "2026-04-28T10:00:00.000Z",
-    "subscription_expires_at": "2026-05-28T10:00:00.000Z",
+    "status": "inactive",
+    "subscription_activated_at": null,
+    "subscription_expires_at": null,
+    "subscription_days_used": 0,
+    "subscription_days_remaining": 0,
     "last_login": null,
-    "created_at": "2026-04-28T10:00:00.000Z"
+    "created_at": "2026-04-28T10:00:00.000Z",
+    "updated_at": "2026-04-28T10:00:00.000Z"
   }
 }
 ```
@@ -662,8 +665,11 @@ This module is separate from the CRM data. It uses the `desktop_app_users` table
     "status": "active",
     "subscription_activated_at": "2026-04-28T10:00:00.000Z",
     "subscription_expires_at": "2026-05-28T10:00:00.000Z",
+    "subscription_days_used": 0,
+    "subscription_days_remaining": 30,
     "last_login": "2026-04-28T10:10:00.000Z",
-    "created_at": "2026-04-28T10:00:00.000Z"
+    "created_at": "2026-04-28T10:00:00.000Z",
+    "updated_at": "2026-04-28T10:10:00.000Z"
   }
 }
 ```
@@ -681,6 +687,60 @@ SET status = 'active',
     updated_at = CURRENT_TIMESTAMP
 WHERE username = 'desktop_user';
 ```
+
+### Desktop Admin Panel
+- **Frontend URL**: `http://localhost:5173/desktop-admin`
+- **Login**: `Decode`
+- **Password**: `Shoxrux2006@`
+
+The admin panel lets you:
+- View all desktop app users.
+- See active/inactive counts.
+- Track activation date, expiration date, days used, and days remaining.
+- Activate or renew a user for another 30 days.
+- Deactivate a user.
+
+### Desktop Admin API Login
+- **POST** `/desktop-auth/admin/login`
+- **Full URL**: `http://localhost:3000/api/desktop-auth/admin/login`
+- **Body**:
+```json
+{
+  "username": "Decode",
+  "password": "Shoxrux2006@"
+}
+```
+- **Response 200**:
+```json
+{
+  "message": "Desktop admin login successful",
+  "token": "desktop_admin_jwt_token",
+  "admin": {
+    "username": "Decode",
+    "userType": "desktop_app_admin"
+  }
+}
+```
+
+For the next admin requests, send:
+```http
+Authorization: Bearer desktop_admin_jwt_token
+```
+
+### List Desktop Users
+- **GET** `/desktop-auth/admin/users`
+- **Full URL**: `http://localhost:3000/api/desktop-auth/admin/users`
+
+### Activate or Renew Subscription
+- **POST** `/desktop-auth/admin/users/:id/activate`
+- Sets `status` to `active`.
+- Sets `subscription_activated_at` to the current time.
+- Gives the user a fresh 30-day subscription window.
+
+### Deactivate Subscription
+- **POST** `/desktop-auth/admin/users/:id/deactivate`
+- Sets `status` to `inactive`.
+- The user will not be allowed to log in.
 
 ### Desktop Auth Errors
 - **400** validation failed, for example missing username/password or short password during registration.
@@ -748,6 +808,8 @@ DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=<your_password>
 DB_NAME=crm_db
+DESKTOP_ADMIN_USERNAME=Decode
+DESKTOP_ADMIN_PASSWORD=Shoxrux2006@
 ```
 
 ---

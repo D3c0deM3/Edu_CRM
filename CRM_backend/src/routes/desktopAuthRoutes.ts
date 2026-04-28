@@ -1,6 +1,7 @@
 const express_desktop_auth = require('express');
 const router_desktop_auth = express_desktop_auth.Router();
 const desktopAuthController = require('../controllers/desktopAuthController');
+const requireDesktopAdmin = desktopAuthController.requireDesktopAdmin;
 
 /**
  * @swagger
@@ -72,6 +73,96 @@ router_desktop_auth.post('/register', desktopAuthController.register);
  *         description: Subscription inactive or expired
  */
 router_desktop_auth.post('/login', desktopAuthController.login);
+
+/**
+ * @swagger
+ * /desktop-auth/admin/login:
+ *   post:
+ *     summary: Login to the desktop app admin panel
+ *     tags: [Desktop Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 example: Decode
+ *               password:
+ *                 type: string
+ *                 example: Shoxrux2006@
+ *     responses:
+ *       200:
+ *         description: Desktop admin login successful
+ *       401:
+ *         description: Invalid admin credentials
+ */
+router_desktop_auth.post('/admin/login', desktopAuthController.adminLogin);
+
+/**
+ * @swagger
+ * /desktop-auth/admin/users:
+ *   get:
+ *     summary: List desktop app users and subscription information
+ *     tags: [Desktop Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of desktop app users
+ *       401:
+ *         description: Desktop admin authentication required
+ */
+router_desktop_auth.get('/admin/users', requireDesktopAdmin, desktopAuthController.getUsers);
+
+/**
+ * @swagger
+ * /desktop-auth/admin/users/{id}/activate:
+ *   post:
+ *     summary: Activate or renew a desktop app user subscription for 30 days
+ *     tags: [Desktop Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Subscription activated
+ *       404:
+ *         description: Desktop app user not found
+ */
+router_desktop_auth.post('/admin/users/:id/activate', requireDesktopAdmin, desktopAuthController.activateUser);
+
+/**
+ * @swagger
+ * /desktop-auth/admin/users/{id}/deactivate:
+ *   post:
+ *     summary: Deactivate a desktop app user subscription
+ *     tags: [Desktop Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Subscription deactivated
+ *       404:
+ *         description: Desktop app user not found
+ */
+router_desktop_auth.post('/admin/users/:id/deactivate', requireDesktopAdmin, desktopAuthController.deactivateUser);
 
 module.exports = router_desktop_auth;
 

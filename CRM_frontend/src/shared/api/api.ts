@@ -15,6 +15,21 @@ export const apiClient = axios.create({
   },
 });
 
+const desktopAdminClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+desktopAdminClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('desktopAdminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Add token to requests
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
@@ -235,4 +250,12 @@ export const authAPI = {
     apiClient.post('/teachers/auth/login', credentials),
   loginStudent: (credentials: { username: string; password: string }) =>
     apiClient.post('/students/auth/login', credentials),
+};
+
+export const desktopAdminAPI = {
+  login: (credentials: { username: string; password: string }) =>
+    desktopAdminClient.post('/desktop-auth/admin/login', credentials),
+  getUsers: () => desktopAdminClient.get('/desktop-auth/admin/users'),
+  activateUser: (id: number) => desktopAdminClient.post(`/desktop-auth/admin/users/${id}/activate`),
+  deactivateUser: (id: number) => desktopAdminClient.post(`/desktop-auth/admin/users/${id}/deactivate`),
 };

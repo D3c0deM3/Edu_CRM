@@ -41,6 +41,7 @@ const ViewSubmissionPage = lazy(() => import('./features/crm/tests/ViewSubmissio
 const TeacherPortal = lazy(() => import('./features/teacher/TeacherPortal'));
 const StudentPortal = lazy(() => import('./features/student/StudentPortal'));
 const StudentQrAttendancePage = lazy(() => import('./features/student/StudentQrAttendancePage'));
+const DesktopAdminPage = lazy(() => import('./features/desktop-admin/DesktopAdminPage'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -108,6 +109,14 @@ function AppContent() {
       <Route path="/login/superuser" element={<LoginPage userType="superuser" />} />
       <Route path="/login/teacher" element={<LoginPage userType="teacher" />} />
       <Route path="/login/student" element={<LoginPage userType="student" />} />
+      <Route
+        path="/desktop-admin"
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <DesktopAdminPage />
+          </Suspense>
+        }
+      />
       <Route
         path="/attendance/qr-check-in/:sessionToken"
         element={

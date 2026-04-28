@@ -19,6 +19,13 @@ const swaggerOptions = {
       }
     ],
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      },
       schemas: {
         Student: {
           type: 'object',
@@ -219,6 +226,8 @@ const swaggerOptions = {
             status: { type: 'string', enum: ['active', 'inactive'] },
             subscription_activated_at: { type: 'string', format: 'date-time' },
             subscription_expires_at: { type: 'string', format: 'date-time' },
+            subscription_days_used: { type: 'integer' },
+            subscription_days_remaining: { type: 'integer' },
             last_login: { type: 'string', format: 'date-time', nullable: true },
             created_at: { type: 'string', format: 'date-time' }
           }
