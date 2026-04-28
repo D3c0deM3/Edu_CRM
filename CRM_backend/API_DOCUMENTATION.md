@@ -2,7 +2,7 @@
 
 ## Overview
 
-Complete CRM (Customer Relationship Management) Backend with 11 modules for managing educational institutions.
+Complete CRM (Customer Relationship Management) Backend with 11 CRM modules for managing educational institutions, plus one isolated desktop-app authentication service.
 
 ### Available Modules
 1. **Students** - Student enrollment and information management
@@ -16,6 +16,7 @@ Complete CRM (Customer Relationship Management) Backend with 11 modules for mana
 9. **Assignments** - Assignment creation and submission tracking
 10. **Subjects** - Subject/Course management with marking schemes
 11. **Superusers** - Admin authentication and account management
+12. **Desktop Auth** - Separate login/register service for an unrelated desktop app
 
 ## Base URL
 ```
@@ -602,6 +603,96 @@ http://localhost:3000/api
 
 ---
 
+## DESKTOP AUTH
+
+This module is separate from the CRM data. It uses the `desktop_app_users` table only and does not connect to students, teachers, centers, payments, or any other CRM table.
+
+### Register Desktop App User
+- **POST** `/desktop-auth/register`
+- **Full URL**: `http://localhost:3000/api/desktop-auth/register`
+- **Headers**: `Content-Type: application/json`
+- **Body**:
+```json
+{
+  "username": "desktop_user",
+  "email": "desktop@example.com",
+  "password": "secret123"
+}
+```
+- `email` is optional.
+- New users are created with `status: "active"` and `subscription_activated_at` set to the current time.
+- **Response 201**:
+```json
+{
+  "message": "Registration successful",
+  "token": "jwt_token_here",
+  "user": {
+    "desktop_user_id": 1,
+    "username": "desktop_user",
+    "email": "desktop@example.com",
+    "status": "active",
+    "subscription_activated_at": "2026-04-28T10:00:00.000Z",
+    "subscription_expires_at": "2026-05-28T10:00:00.000Z",
+    "last_login": null,
+    "created_at": "2026-04-28T10:00:00.000Z"
+  }
+}
+```
+
+### Login Desktop App User
+- **POST** `/desktop-auth/login`
+- **Full URL**: `http://localhost:3000/api/desktop-auth/login`
+- **Headers**: `Content-Type: application/json`
+- **Body**:
+```json
+{
+  "username": "desktop_user",
+  "password": "secret123"
+}
+```
+- **Response 200**:
+```json
+{
+  "message": "Login successful",
+  "token": "jwt_token_here",
+  "user": {
+    "desktop_user_id": 1,
+    "username": "desktop_user",
+    "email": "desktop@example.com",
+    "status": "active",
+    "subscription_activated_at": "2026-04-28T10:00:00.000Z",
+    "subscription_expires_at": "2026-05-28T10:00:00.000Z",
+    "last_login": "2026-04-28T10:10:00.000Z",
+    "created_at": "2026-04-28T10:00:00.000Z"
+  }
+}
+```
+
+### Subscription Rule
+- Valid statuses are `active` and `inactive`.
+- On every login, the API checks `subscription_activated_at`.
+- If 30 days or more have passed since `subscription_activated_at`, the API automatically updates the user to `inactive` and returns `403`.
+- Inactive users cannot log in.
+- To renew a subscription manually, update the row:
+```sql
+UPDATE desktop_app_users
+SET status = 'active',
+    subscription_activated_at = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP
+WHERE username = 'desktop_user';
+```
+
+### Desktop Auth Errors
+- **400** validation failed, for example missing username/password or short password during registration.
+- **401** invalid username/password.
+- **403** subscription is inactive or expired.
+- **409** username or email already exists.
+
+### Desktop App Table
+Manual SQL is available at `CRM_database/desktop_app_users.sql`. The API also creates this table automatically on first register/login request if it does not exist.
+
+---
+
 ## SWAGGER/OPENAPI DOCUMENTATION
 
 ### Interactive API Documentation
@@ -643,6 +734,7 @@ http://localhost:3000/api
 - `assignment_submissions` - Assignment submission tracking
 - `subjects` - Subject/Course information
 - `superusers` - Admin/Superuser accounts with authentication
+- `desktop_app_users` - Separate desktop-app credentials and subscription status
 
 ---
 

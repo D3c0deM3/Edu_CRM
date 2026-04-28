@@ -19,6 +19,7 @@ const subjectRoutes = require('./routes/subjectRoutes');
 const superuserRoutes = require('./routes/superuserRoutes');
 const testRoutes = require('./routes/testRoutes');
 const teacherSalaryRoutes = require('./routes/teacherSalaryRoutes');
+const desktopAuthRoutes = require('./routes/desktopAuthRoutes');
 const { startParentTelegramBot } = require('./services/parentBotService');
 
 const app = express();
@@ -66,6 +67,7 @@ app.use('/docs', swaggerUI.serve, swaggerUI.setup(swaggerDocs, { explorer: true 
 app.post('/api/students/auth/login', require('./controllers/studentController').studentLogin);
 app.post('/api/teachers/auth/login', require('./controllers/teacherController').teacherLogin);
 app.post('/api/superusers/auth/login', require('./controllers/superuserController').login);
+app.use('/api/desktop-auth', desktopAuthRoutes);
 
 // Protected routes - require authentication + role-based access
 // Students: superuser and teacher can manage; students can view own data via portal

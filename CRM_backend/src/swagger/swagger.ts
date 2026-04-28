@@ -209,6 +209,19 @@ const swaggerOptions = {
             created_at: { type: 'string', format: 'date-time' },
             updated_at: { type: 'string', format: 'date-time' }
           }
+        },
+        DesktopAppUser: {
+          type: 'object',
+          properties: {
+            desktop_user_id: { type: 'integer' },
+            username: { type: 'string' },
+            email: { type: 'string', format: 'email', nullable: true },
+            status: { type: 'string', enum: ['active', 'inactive'] },
+            subscription_activated_at: { type: 'string', format: 'date-time' },
+            subscription_expires_at: { type: 'string', format: 'date-time' },
+            last_login: { type: 'string', format: 'date-time', nullable: true },
+            created_at: { type: 'string', format: 'date-time' }
+          }
         }
       }
     }
