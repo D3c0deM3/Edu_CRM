@@ -279,7 +279,7 @@ Records all fee/tuition payments made by students.
 | `center_id`             | INT             | NOT NULL, FK → `edu_centers.center_id`   | Associated center                    |
 | `payment_date`          | DATE            | NOT NULL                                 | Date of payment                      |
 | `amount`                | DECIMAL(12,2)   | NOT NULL                                 | Amount paid                          |
-| `currency`              | VARCHAR(10)     | DEFAULT `'USD'`                          | Currency code                        |
+| `currency`              | VARCHAR(10)     | DEFAULT `'UZS'`                          | Currency code                        |
 | `payment_method`        | payment_method  | DEFAULT `'Cash'`                         | Method of payment                    |
 | `transaction_reference` | VARCHAR(100)    |                                          | External transaction ID              |
 | `receipt_number`        | VARCHAR(50)     | UNIQUE                                   | Unique receipt number                |

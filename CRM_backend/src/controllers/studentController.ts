@@ -110,21 +110,58 @@ exports.updateStudent = async (req: any, res: any) => {
     const {
       first_name,
       last_name,
+      username,
+      password,
       email,
       phone,
+      date_of_birth,
       status,
       class_id,
       parent_name,
       parent_phone,
     } = req.body;
+
+    const existing = await student_db.query(
+      'SELECT student_id, center_id, teacher_id FROM students WHERE student_id = $1',
+      [id]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    if (Number(existing.rows[0].center_id) !== Number(req.user?.center_id)) {
+      return res.status(403).json({ error: 'You can only update students in your own center.' });
+    }
+
+    if (req.user?.userType === 'teacher' && Number(existing.rows[0].teacher_id) !== Number(req.user.id)) {
+      return res.status(403).json({ error: 'You can only update your own students.' });
+    }
+
+    if (username) {
+      const usernameCheck = await student_db.query(
+        'SELECT student_id FROM students WHERE username = $1 AND student_id <> $2',
+        [username, id]
+      );
+      if (usernameCheck.rows.length > 0) {
+        return res.status(400).json({ error: 'Username already exists' });
+      }
+    }
+
+    const password_hash = typeof password === 'string' && password.trim()
+      ? hashPassword1(password.trim())
+      : null;
     const { parentPasswordHash, normalizedParentPhone } = await prepareStudentParentFields(req.body);
     const result = await student_db.query(
-      'UPDATE students SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), phone = COALESCE($4, phone), status = COALESCE($5, status), class_id = COALESCE($6, class_id), parent_name = COALESCE($7, parent_name), parent_phone = COALESCE($8, parent_phone), parent_password_hash = COALESCE($9, parent_password_hash), updated_at = CURRENT_TIMESTAMP WHERE student_id = $10 RETURNING *',
+      'UPDATE students SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), username = COALESCE($3, username), password_hash = COALESCE($4, password_hash), email = COALESCE($5, email), phone = COALESCE($6, phone), date_of_birth = COALESCE($7, date_of_birth), status = COALESCE($8, status), class_id = COALESCE($9, class_id), parent_name = COALESCE($10, parent_name), parent_phone = COALESCE($11, parent_phone), parent_password_hash = COALESCE($12, parent_password_hash), updated_at = CURRENT_TIMESTAMP WHERE student_id = $13 RETURNING *',
       [
         first_name,
         last_name,
+        username || null,
+        password_hash,
         email,
         phone,
+        date_of_birth || null,
         status,
         class_id,
         parent_name,
@@ -144,16 +181,57 @@ exports.updateStudent = async (req: any, res: any) => {
 };
 
 exports.deleteStudent = async (req: any, res: any) => {
+  const client = await student_db.connect();
+
   try {
     const { id } = req.params;
-    const result = await student_db.query('DELETE FROM students WHERE student_id = $1 RETURNING *', [id]);
+    const existing = await client.query(
+      'SELECT student_id, center_id FROM students WHERE student_id = $1',
+      [id]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    if (Number(existing.rows[0].center_id) !== Number(req.user?.center_id)) {
+      return res.status(403).json({ error: 'You can only delete students in your own center.' });
+    }
+
+    await client.query('BEGIN');
+
+    const dependentTables = [
+      'assignment_submissions',
+      'test_results_summary',
+      'test_submissions',
+      'attendance_qr_checkins',
+      'parent_notification_logs',
+      'attendance',
+      'grades',
+      'payments',
+      'debts',
+    ];
+
+    for (const tableName of dependentTables) {
+      const tableExists = await client.query('SELECT to_regclass($1) AS table_name', [`public.${tableName}`]);
+      if (tableExists.rows[0]?.table_name) {
+        await client.query(`DELETE FROM ${tableName} WHERE student_id = $1`, [id]);
+      }
+    }
+
+    const result = await client.query('DELETE FROM students WHERE student_id = $1 RETURNING *', [id]);
+    await client.query('COMMIT');
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
     res.json({ message: 'Student deleted successfully', student: result.rows[0] });
   } catch (error: any) {
+    await client.query('ROLLBACK');
     console.error('Database error:', error);
     res.status(500).json({ error: 'Failed to delete student', details: error.message || error.toString() });
+  } finally {
+    client.release();
   }
 };
 

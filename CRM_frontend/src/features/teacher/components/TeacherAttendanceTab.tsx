@@ -43,6 +43,7 @@ interface ClassInfo {
   class_name: string;
   teacher_id?: number | null;
   room_number?: string | null;
+  section?: string | null;
 }
 
 interface Student {
@@ -109,6 +110,25 @@ const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Half Day'] as const;
 const todayIso = () => new Date().toISOString().split('T')[0];
 const DEFAULT_QR_EXPIRY_MINUTES = 10;
 const DEFAULT_QR_RADIUS_METERS = 75;
+
+const getLessonExpiryMinutes = (classInfo?: ClassInfo, attendanceDate?: string) => {
+  if (!classInfo?.section || !attendanceDate) {
+    return DEFAULT_QR_EXPIRY_MINUTES;
+  }
+
+  try {
+    const schedule = JSON.parse(classInfo.section);
+    if (!schedule.endTime) {
+      return DEFAULT_QR_EXPIRY_MINUTES;
+    }
+
+    const lessonEndsAt = new Date(`${attendanceDate}T${schedule.endTime}:00`);
+    const minutesUntilEnd = Math.ceil((lessonEndsAt.getTime() - Date.now()) / 60000);
+    return Math.min(Math.max(minutesUntilEnd, 1), 120);
+  } catch {
+    return DEFAULT_QR_EXPIRY_MINUTES;
+  }
+};
 
 const requestBrowserPosition = (
   options: PositionOptions
@@ -527,7 +547,10 @@ const TeacherAttendanceTab = ({
       const payload: Record<string, any> = {
         class_id: selectedClass,
         attendance_date: attendanceDate,
-        expires_in_minutes: DEFAULT_QR_EXPIRY_MINUTES,
+        expires_in_minutes: getLessonExpiryMinutes(
+          classes.find((classItem) => Number(classItem.class_id) === Number(selectedClass)),
+          attendanceDate
+        ),
         location_radius_meters: DEFAULT_QR_RADIUS_METERS,
       };
       let locationLockEnabled = false;

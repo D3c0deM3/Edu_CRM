@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Eye, Mail, Phone, GraduationCap, User, X, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Mail, Phone, GraduationCap, User, Loader2 } from 'lucide-react';
 import { useCRUD } from '../hooks/useCRUD';
 import { teacherAPI } from '../../../shared/api/api';
 import { fetchCenters, genderOptions, teacherStatusOptions } from '../../../utils/dropdownOptions';
@@ -57,6 +57,12 @@ const TeachersPage = () => {
     roles: ['teacher'],
   });
   const [centerOptions, setCenterOptions] = useState<any[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const toDateInputValue = (value?: string) => {
+    if (!value) return '';
+    return value.includes('T') ? value.split('T')[0] : value;
+  };
 
   useEffect(() => {
     actions.fetchAll();
@@ -75,7 +81,10 @@ const TeachersPage = () => {
   const handleOpenModal = (teacher?: Teacher) => {
     if (teacher) {
       setEditingId(teacher.teacher_id || teacher.id || null);
-      setFormData(teacher);
+      setFormData({
+        ...teacher,
+        date_of_birth: toDateInputValue(teacher.date_of_birth),
+      });
     } else {
       setEditingId(null);
       setFormData({
@@ -85,6 +94,7 @@ const TeachersPage = () => {
         roles: ['teacher'],
       });
     }
+    setShowPassword(false);
     setIsModalOpen(true);
   };
 
@@ -97,14 +107,19 @@ const TeachersPage = () => {
       status: 'Active',
       roles: ['teacher'],
     });
+    setShowPassword(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = {
+      ...formData,
+      date_of_birth: toDateInputValue(formData.date_of_birth),
+    };
     if (editingId) {
-      await actions.update(editingId, formData);
+      await actions.update(editingId, payload);
     } else {
-      await actions.create(formData);
+      await actions.create(payload);
     }
     handleCloseModal();
   };
@@ -253,17 +268,9 @@ const TeachersPage = () => {
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
         <DialogContent className="max-w-2xl rounded-2xl p-0 gap-0 overflow-hidden">
           <DialogHeader className="bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-4">
-            <div className="flex justify-between items-center">
-              <DialogTitle className="text-white font-semibold text-lg">
-                {editingId ? 'Edit Teacher' : 'Add New Teacher'}
-              </DialogTitle>
-              <button
-                onClick={handleCloseModal}
-                className="text-white hover:text-white/80 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+            <DialogTitle className="text-white font-semibold text-lg">
+              {editingId ? 'Edit Teacher' : 'Add New Teacher'}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto p-4 sm:p-6">
@@ -320,7 +327,7 @@ const TeachersPage = () => {
                     id="date_of_birth"
                     type="date"
                     required
-                    value={formData.date_of_birth || ''}
+                    value={toDateInputValue(formData.date_of_birth)}
                     onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
                   />
                 </div>
@@ -410,13 +417,24 @@ const TeachersPage = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        required
-                        value={formData.password || ''}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      />
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={formData.password || ''}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((visible) => !visible)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                       <p className="text-xs text-muted-foreground">Min 6 characters</p>
                     </div>
                   </>

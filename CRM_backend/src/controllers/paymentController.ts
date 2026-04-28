@@ -35,7 +35,7 @@ exports.createPayment = async (req: any, res: any) => {
     const { student_id, center_id, payment_date, amount, currency, payment_method, transaction_reference, receipt_number, payment_status, payment_type, notes } = req.body;
     const result = await payment_db.query(
       'INSERT INTO payments (student_id, center_id, payment_date, amount, currency, payment_method, transaction_reference, receipt_number, payment_status, payment_type, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
-      [student_id, center_id, payment_date, amount, currency || 'USD', payment_method || 'Cash', transaction_reference, receipt_number, payment_status || 'Completed', payment_type, notes]
+      [student_id, center_id, payment_date, amount, currency || 'UZS', payment_method || 'Cash', transaction_reference, receipt_number, payment_status || 'Completed', payment_type, notes]
     );
     await syncAutoDebtsForCenter(result.rows[0].center_id, [result.rows[0].student_id]);
     res.status(201).json(result.rows[0]);

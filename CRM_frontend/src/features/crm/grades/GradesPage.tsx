@@ -733,7 +733,7 @@ const GradesPage = () => {
                   {searchTerm && <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0" onClick={() => setSearchTerm('')}><X className="h-4 w-4" /></Button>}
                 </div>
                 <Button variant={showFilters ? 'default' : 'outline'} onClick={() => setShowFilters(!showFilters)}>
-                  <Filter className="h-4 w-4 mr-2" />Filters
+                  <Filter className="h-4 w-4 mr-2" />Filter
                   {hasActiveFilters && <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">{(filterTerm ? 1 : 0) + (filterGrade ? 1 : 0)}</span>}
                 </Button>
                 {hasActiveFilters && <Button variant="outline" size="sm" onClick={clearFilters}><X className="h-4 w-4 mr-2" />Clear</Button>}

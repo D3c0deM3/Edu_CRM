@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, Trash2, X, ArrowLeft, Search, Filter, User, BookOpen, Plus, DollarSign, CreditCard, Users, Loader2, ChevronLeft, ChevronRight, Zap, SlidersHorizontal } from 'lucide-react';
+import { Pencil, Trash2, X, ArrowLeft, Search, Filter, User, BookOpen, Plus, CreditCard, Users, Loader2, ChevronLeft, ChevronRight, Zap, SlidersHorizontal } from 'lucide-react';
 import { useCRUD } from '../hooks/useCRUD';
 import { paymentAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/table';
 import { useAppSelector } from '../hooks';
 import type { RootState } from '../../../store';
+import { formatCurrency } from '../../../utils/helpers';
 
 interface Payment {
   payment_id?: number;
@@ -68,7 +69,7 @@ interface Class {
   id?: number;
   class_name: string;
   class_code: string;
-  level: number;
+  level: string | number;
   teacher_id?: number;
 }
 
@@ -115,7 +116,7 @@ const PaymentsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Partial<Payment>>({
-    currency: 'USD',
+    currency: 'UZS',
     payment_method: 'Cash',
     payment_type: 'Tuition',
     payment_status: 'Completed',
@@ -187,7 +188,7 @@ const PaymentsPage = () => {
         class_id: quickClassId || undefined,
         payment_date: payDate,
         amount: Number(quickAmount),
-        currency: 'USD',
+        currency: 'UZS',
         payment_method: quickMethod,
         payment_type: quickType,
         payment_status: 'Completed',
@@ -222,7 +223,7 @@ const PaymentsPage = () => {
       setFormData({
         student_id: selectedFolder?.type === 'student' ? selectedFolder.id : undefined,
         center_id: user?.center_id || 1,
-        currency: 'USD',
+        currency: 'UZS',
         payment_method: 'Cash',
         payment_type: 'Tuition',
         payment_status: 'Completed',
@@ -236,7 +237,7 @@ const PaymentsPage = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ currency: 'USD', payment_method: 'Cash', payment_type: 'Tuition', payment_status: 'Completed' });
+    setFormData({ currency: 'UZS', payment_method: 'Cash', payment_type: 'Tuition', payment_status: 'Completed' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -566,7 +567,7 @@ const PaymentsPage = () => {
                     <div className="space-y-1">
                       <Label className="text-xs">Amount *</Label>
                       <div className="relative">
-                        <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <CreditCard className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
                           type="number" min="0" step="0.01" placeholder="0.00"
                           value={quickAmount}
@@ -650,12 +651,13 @@ const PaymentsPage = () => {
               {searchTerm && <Button variant="ghost" size="sm" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0" onClick={() => setSearchTerm('')}><X className="h-4 w-4" /></Button>}
             </div>
             <Button variant={showFilters ? 'default' : 'outline'} onClick={() => setShowFilters(!showFilters)}>
-              <Filter className="h-4 w-4 mr-2" />Filters
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
             </Button>
             {hasActiveFilters && <Button variant="outline" size="sm" onClick={clearFilters}><X className="h-4 w-4 mr-1" />Clear</Button>}
             <div className="text-sm text-muted-foreground flex items-center gap-3">
               <span>{displayedPayments.length} records</span>
-              <span className="font-semibold text-foreground">${totalAmount.toLocaleString()}</span>
+              <span className="font-semibold text-foreground">{formatCurrency(totalAmount, 'UZS')}</span>
             </div>
           </div>
 
@@ -710,7 +712,7 @@ const PaymentsPage = () => {
                     <TableCell className="font-mono text-xs">{payment.receipt_number}</TableCell>
                     {selectedFolder.type !== 'student' && <TableCell>{getStudentName(payment.student_id)}</TableCell>}
                     <TableCell>{payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '—'}</TableCell>
-                    <TableCell className="font-semibold">${Number(payment.amount || 0).toFixed(2)}</TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(Number(payment.amount || 0), 'UZS')}</TableCell>
                     <TableCell>{payment.payment_method}</TableCell>
                     <TableCell>{payment.payment_type}</TableCell>
                     <TableCell>
@@ -762,7 +764,7 @@ const PaymentsPage = () => {
               </div>
               <div className="space-y-1.5">
                 <Label>Amount *</Label>
-                <div className="relative"><DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <div className="relative"><CreditCard className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input type="number" required step="0.01" min="0" value={formData.amount || ''} onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })} className="pl-7" />
                 </div>
               </div>

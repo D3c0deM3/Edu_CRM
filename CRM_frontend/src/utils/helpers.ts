@@ -59,6 +59,12 @@ export const formatDate = (date: string | Date): string => {
 
 // Format currency utility
 export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
+  if (currency === 'UZS') {
+    return `${new Intl.NumberFormat('uz-UZ', {
+      maximumFractionDigits: 2,
+    }).format(amount)} so'm`;
+  }
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,

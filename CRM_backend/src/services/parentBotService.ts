@@ -66,6 +66,12 @@ const parentLanguagePreferences = new Map<number, ParentLanguage>();
 const roundMoney = (value: number): number =>
   Math.round((value + Number.EPSILON) * 100) / 100;
 
+const formatMoney = (value: number): string =>
+  `${roundMoney(value).toLocaleString('uz-UZ', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })} UZS`;
+
 const toNumber = (value: unknown): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -881,10 +887,10 @@ const getChildSummaryText = async (
     '',
     `${text.attendanceSummary}: ${text.present} ${attendance.present_count || 0}, ${text.absent} ${attendance.absent_count || 0}, ${text.late} ${attendance.late_count || 0}`,
     `${text.averageGrade}: ${roundMoney(toNumber(grades.average_percentage))}% (${interpolate(text.gradeItems, { count: grades.grade_count || 0 })})`,
-    `${text.totalPaid}: $${(paymentSnapshot?.totalPaid || 0).toFixed(2)}`,
-    `${text.currentDebt}: $${(paymentSnapshot?.currentDebt || 0).toFixed(2)}`,
+    `${text.totalPaid}: ${formatMoney(paymentSnapshot?.totalPaid || 0)}`,
+    `${text.currentDebt}: ${formatMoney(paymentSnapshot?.currentDebt || 0)}`,
     paymentSnapshot?.nextDueDate
-      ? `${text.nextDueDate}: ${paymentSnapshot.nextDueDate} ($${paymentSnapshot.nextDueBalance.toFixed(2)})`
+      ? `${text.nextDueDate}: ${paymentSnapshot.nextDueDate} (${formatMoney(paymentSnapshot.nextDueBalance)})`
       : `${text.nextDueDate}: ${text.noUnpaidCycle}`,
   ].join('\n');
 };
@@ -966,17 +972,17 @@ const getPaymentsText = async (
     interpolate(text.paymentSummary, {
       name: `${paymentSnapshot.student.first_name} ${paymentSnapshot.student.last_name}`,
     }),
-    `${text.totalPaid}: $${paymentSnapshot.totalPaid.toFixed(2)}`,
-    `${text.currentDebt}: $${paymentSnapshot.currentDebt.toFixed(2)}`,
+    `${text.totalPaid}: ${formatMoney(paymentSnapshot.totalPaid)}`,
+    `${text.currentDebt}: ${formatMoney(paymentSnapshot.currentDebt)}`,
     paymentSnapshot.nextDueDate
-      ? `${text.nextDueDate}: ${paymentSnapshot.nextDueDate} ($${paymentSnapshot.nextDueBalance.toFixed(2)})`
+      ? `${text.nextDueDate}: ${paymentSnapshot.nextDueDate} (${formatMoney(paymentSnapshot.nextDueBalance)})`
       : `${text.nextDueDate}: ${text.noNextDueDate}`,
   ];
 
   if (recentPayments.length > 0) {
     lines.push('', text.completedPayments);
     recentPayments.forEach((payment: any) => {
-      lines.push(`${payment.payment_date}: $${roundMoney(toNumber(payment.amount)).toFixed(2)}`);
+      lines.push(`${payment.payment_date}: ${formatMoney(toNumber(payment.amount))}`);
     });
   }
 
@@ -1345,7 +1351,7 @@ export const runParentPaymentReminderSweep = async () => {
           }),
           `${text.class}: ${student.class_name || text.noClassAssigned}`,
           `${text.dueDate}: ${dueCycle.dueDate}`,
-          `${text.amountDue}: $${dueCycle.balance.toFixed(2)}`,
+          `${text.amountDue}: ${formatMoney(dueCycle.balance)}`,
           interpolate(text.reminderInfo, { days: warningDays }),
         ].join('\n'),
         language,

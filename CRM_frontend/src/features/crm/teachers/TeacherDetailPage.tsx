@@ -5,7 +5,6 @@ import { AssignmentSectionTeacher } from './components/AssignmentSectionTeacher'
 import { showToast } from '../../../utils/toast';
 import {
   ArrowLeft,
-  X,
   Plus,
   Mail,
   Phone,
@@ -599,14 +598,9 @@ const TeacherDetailPage = () => {
       <Dialog open={isGradeModalOpen} onOpenChange={(open) => { if (!open) handleCloseGradeModal(); }}>
         <DialogContent className="max-w-3xl rounded-2xl p-0 overflow-hidden">
           <DialogHeader className="bg-gradient-to-br from-indigo-500 to-purple-500 p-6">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-white text-lg font-semibold">
-                Add Grades to Students
-              </DialogTitle>
-              <button onClick={handleCloseGradeModal} className="text-white hover:text-white/80">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+            <DialogTitle className="text-white text-lg font-semibold">
+              Add Grades to Students
+            </DialogTitle>
           </DialogHeader>
 
           <div className="p-4 sm:p-6">

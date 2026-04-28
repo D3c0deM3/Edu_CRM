@@ -42,6 +42,7 @@ import {
   debtAPI,
   centerAPI,
 } from '../../../shared/api/api';
+import { formatCurrency } from '../../../utils/helpers';
 
 /* ═══════════════════════════════════════════════
    Shared tiny components (no chart library needed)
@@ -279,8 +280,8 @@ const Dashboard = memo(() => {
           { title: 'Total Students', value: students.length, sub: `${activeStudents} active`, icon: <Users className="h-5 w-5" />, color: '#6366f1', path: '/students' },
           { title: 'Total Teachers', value: teachers.length, sub: `${activeTeachers} active`, icon: <UserCheck className="h-5 w-5" />, color: '#8b5cf6', path: '/teachers' },
           { title: 'Total Classes', value: classes.length, sub: `${studentTeacherRatio} stu/teacher`, icon: <BookOpen className="h-5 w-5" />, color: '#06b6d4', path: '/classes' },
-          { title: 'Revenue', value: `$${totalRevenue.toLocaleString()}`, sub: `${payments.length} payments`, icon: <DollarSign className="h-5 w-5" />, color: '#10b981', path: '/payments' },
-          { title: 'Outstanding', value: outstandingDebts.length, sub: totalDebtAmount > 0 ? `$${totalDebtAmount.toLocaleString()}` : 'All clear', icon: <AlertTriangle className="h-5 w-5" />, color: outstandingDebts.length > 0 ? '#ef4444' : '#10b981', path: '/debts' },
+          { title: 'Revenue', value: formatCurrency(totalRevenue, 'UZS'), sub: `${payments.length} payments`, icon: <DollarSign className="h-5 w-5" />, color: '#10b981', path: '/payments' },
+          { title: 'Outstanding', value: outstandingDebts.length, sub: totalDebtAmount > 0 ? formatCurrency(totalDebtAmount, 'UZS') : 'All clear', icon: <AlertTriangle className="h-5 w-5" />, color: outstandingDebts.length > 0 ? '#ef4444' : '#10b981', path: '/debts' },
           { title: 'Pass Rate', value: `${passRate.toFixed(0)}%`, sub: `${gradeTotal} grades`, icon: <GraduationCap className="h-5 w-5" />, color: '#f59e0b', path: '/grades' },
         ].map((kpi, i) => (
           <Card key={kpi.title} className={`dashboard-card cursor-pointer animate-fade-in-up stagger-${i + 1} border-l-4`}

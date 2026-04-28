@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, Trash2, X, Info, ArrowLeft, Folder, FolderOpen, Search, Filter, Plus, Users, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, X, Info, ArrowLeft, Folder, FolderOpen, Search, Filter, Plus, Users, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCRUD } from '../hooks/useCRUD';
 import { studentAPI, classAPI } from '../../../shared/api/api';
@@ -60,7 +60,7 @@ interface Class {
   id?: number;
   class_name: string;
   class_code: string;
-  level: number;
+  level: string | number;
   capacity: number;
 }
 
@@ -81,12 +81,19 @@ const StudentsPage = () => {
   const [classOptions, setClassOptions] = useState<Array<{ id?: number; label: string; value: string | number }>>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [loadingClasses, setLoadingClasses] = useState(false);
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
+  const [showParentPassword, setShowParentPassword] = useState(false);
 
   // Search and Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGender, setFilterGender] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+
+  const toDateInputValue = (value?: string) => {
+    if (!value) return '';
+    return value.includes('T') ? value.split('T')[0] : value;
+  };
 
   useEffect(() => {
     actions.fetchAll();
@@ -129,7 +136,12 @@ const StudentsPage = () => {
   const handleOpenModal = (student?: Student) => {
     if (student) {
       setEditingId(student.student_id || student.id || null);
-      setFormData({ ...student, password: '', parent_password: '' });
+      setFormData({
+        ...student,
+        date_of_birth: toDateInputValue(student.date_of_birth),
+        password: '',
+        parent_password: '',
+      });
     } else {
       setEditingId(null);
       setFormData({
@@ -142,6 +154,8 @@ const StudentsPage = () => {
         class_id: selectedClass ? (selectedClass.class_id || selectedClass.id) : undefined,
       });
     }
+    setShowStudentPassword(false);
+    setShowParentPassword(false);
     setIsModalOpen(true);
   };
 
@@ -156,14 +170,21 @@ const StudentsPage = () => {
       password: '',
       parent_password: '',
     });
+    setShowStudentPassword(false);
+    setShowParentPassword(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = { ...formData };
+    if (editingId && !payload.password) delete payload.password;
+    if (editingId && !payload.parent_password) delete payload.parent_password;
+    payload.date_of_birth = toDateInputValue(payload.date_of_birth);
+
     if (editingId) {
-      await actions.update(editingId, formData);
+      await actions.update(editingId, payload);
     } else {
-      await actions.create(formData);
+      await actions.create(payload);
     }
     handleCloseModal();
   };
@@ -317,7 +338,7 @@ const StudentsPage = () => {
                         </span>
                       </div>
                       <p className="text-xs opacity-80 mt-2">
-                        Level {cls.level} &bull; Capacity: {cls.capacity}
+                        {cls.level || 'No level'} &bull; Capacity: {cls.capacity}
                       </p>
                     </div>
                   </Card>
@@ -332,7 +353,7 @@ const StudentsPage = () => {
                       id: -1,
                       class_name: 'Unassigned',
                       class_code: 'N/A',
-                      level: 0,
+                      level: '',
                       capacity: 0,
                     })
                   }
@@ -387,7 +408,7 @@ const StudentsPage = () => {
               className={cn(showFilters && 'bg-indigo-500 hover:bg-indigo-600')}
             >
               <Filter className="h-4 w-4 mr-1.5" />
-              Filters
+              Filter
               {hasActiveFilters && (
                 <Badge className="ml-1.5 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]">
                   {(filterGender ? 1 : 0) + (filterStatus ? 1 : 0)}
@@ -546,17 +567,9 @@ const StudentsPage = () => {
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
         <DialogContent className="max-w-2xl rounded-2xl p-0 gap-0 overflow-hidden">
           <DialogHeader className="bg-gradient-to-br from-indigo-500 to-violet-500 px-6 py-4">
-            <div className="flex justify-between items-center">
-              <DialogTitle className="text-white font-semibold text-lg">
-                {editingId ? 'Edit Student' : 'Add New Student'}
-              </DialogTitle>
-              <button
-                onClick={handleCloseModal}
-                className="text-white hover:text-white/80 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+            <DialogTitle className="text-white font-semibold text-lg">
+              {editingId ? 'Edit Student' : 'Add New Student'}
+            </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
@@ -611,14 +624,25 @@ const StudentsPage = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password {!editingId && '*'}</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    required={!editingId}
-                    value={formData.password || ''}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder={editingId ? 'Leave blank to keep current' : 'Login password'}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showStudentPassword ? 'text' : 'password'}
+                      required={!editingId}
+                      value={formData.password || ''}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder={editingId ? 'Leave blank to keep current' : 'Login password'}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowStudentPassword((visible) => !visible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showStudentPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showStudentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone *</Label>
@@ -636,7 +660,7 @@ const StudentsPage = () => {
                     id="date_of_birth"
                     type="date"
                     required
-                    value={formData.date_of_birth || ''}
+                    value={toDateInputValue(formData.date_of_birth)}
                     onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
                   />
                 </div>
@@ -661,14 +685,25 @@ const StudentsPage = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="parent_password">Parent Bot Password {!editingId && '*'}</Label>
-                  <Input
-                    id="parent_password"
-                    type="password"
-                    required={!editingId}
-                    value={formData.parent_password || ''}
-                    onChange={(e) => setFormData({ ...formData, parent_password: e.target.value })}
-                    placeholder={editingId ? 'Leave blank to keep current parent password' : 'Password for parent Telegram bot login'}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="parent_password"
+                      type={showParentPassword ? 'text' : 'password'}
+                      required={!editingId}
+                      value={formData.parent_password || ''}
+                      onChange={(e) => setFormData({ ...formData, parent_password: e.target.value })}
+                      placeholder={editingId ? 'Leave blank to keep current parent password' : 'Password for parent Telegram bot login'}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowParentPassword((visible) => !visible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showParentPassword ? 'Hide parent password' : 'Show parent password'}
+                    >
+                      {showParentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Gender *</Label>

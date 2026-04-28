@@ -24,6 +24,7 @@ import { useCRUD } from '../hooks/useCRUD';
 import { classAPI } from '../../../shared/api/api';
 import { fetchCenters, fetchTeachers, frequencyOptions } from '../../../utils/dropdownOptions';
 import { showToast } from '../../../utils/toast';
+import { formatCurrency } from '../../../utils/helpers';
 import ClassDetailModal from './ClassDetailModal';
 
 interface Class {
@@ -32,13 +33,16 @@ interface Class {
   center_id: number;
   class_name: string;
   class_code: string;
-  level: number;
+  level: string | number;
   section?: string;
   capacity: number;
   teacher_id?: number;
   room_number: string;
   payment_amount: number;
   payment_frequency: string;
+  teacher_name?: string | null;
+  teacher_first_name?: string | null;
+  teacher_last_name?: string | null;
 }
 
 const ClassesPage = () => {
@@ -56,7 +60,24 @@ const ClassesPage = () => {
   // Schedule state
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [scheduleTime, setScheduleTime] = useState('09:00');
+  const [scheduleEndTime, setScheduleEndTime] = useState('11:00');
   const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  const parseSchedule = (section?: string) => {
+    try {
+      return JSON.parse(section || '{}');
+    } catch {
+      return {};
+    }
+  };
+
+  const getScheduleLabel = (section?: string) => {
+    const schedule = parseSchedule(section);
+    if (schedule.days?.length) {
+      return `${schedule.days.join(', ')} ${schedule.time || ''}${schedule.endTime ? ` - ${schedule.endTime}` : ''}`.trim();
+    }
+    return section || 'Not set';
+  };
 
   // Class detail modal state
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -94,14 +115,17 @@ const ClassesPage = () => {
           const parsed = JSON.parse(cls.section);
           setSelectedDays(parsed.days || []);
           setScheduleTime(parsed.time || '09:00');
+          setScheduleEndTime(parsed.endTime || '11:00');
         } catch {
           // If section is not JSON (plain text), keep it as is
           setSelectedDays([]);
           setScheduleTime('09:00');
+          setScheduleEndTime('11:00');
         }
       } else {
         setSelectedDays([]);
         setScheduleTime('09:00');
+        setScheduleEndTime('11:00');
       }
     } else {
       setEditingId(null);
@@ -111,6 +135,7 @@ const ClassesPage = () => {
       });
       setSelectedDays([]);
       setScheduleTime('09:00');
+      setScheduleEndTime('11:00');
     }
     setIsModalOpen(true);
   };
@@ -124,6 +149,7 @@ const ClassesPage = () => {
     });
     setSelectedDays([]);
     setScheduleTime('09:00');
+    setScheduleEndTime('11:00');
   };
 
   const handleDayChange = (day: string, checked: boolean) => {
@@ -139,6 +165,7 @@ const ClassesPage = () => {
     const scheduleObject = {
       days: selectedDays,
       time: scheduleTime,
+      endTime: scheduleEndTime,
     };
 
     const dataToSubmit = {
@@ -219,19 +246,12 @@ const ClassesPage = () => {
               <CardContent className="flex-1 pt-4 space-y-3">
                 <div>
                   <p className="text-xs text-muted-foreground">Level</p>
-                  <p className="text-sm font-semibold">Level {cls.level}</p>
+                  <p className="text-sm font-semibold">{cls.level || 'Not set'}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Schedule</p>
                   <p className="text-sm font-semibold">
-                    {(() => {
-                      try {
-                        const schedule = JSON.parse(cls.section || '{}');
-                        return `${schedule.days?.join(', ')} at ${schedule.time}`;
-                      } catch {
-                        return cls.section || 'Not set';
-                      }
-                    })()}
+                    {getScheduleLabel(cls.section)}
                   </p>
                 </div>
                 <div>
@@ -245,7 +265,7 @@ const ClassesPage = () => {
                 <div>
                   <p className="text-xs text-muted-foreground">Payment</p>
                   <p className="text-sm font-semibold">
-                    ${cls.payment_amount} ({cls.payment_frequency})
+                    {formatCurrency(Number(cls.payment_amount || 0), 'UZS')} ({cls.payment_frequency})
                   </p>
                 </div>
               </CardContent>
@@ -305,9 +325,10 @@ const ClassesPage = () => {
                 <Label htmlFor="level">Level</Label>
                 <Input
                   id="level"
-                  type="number"
+                  type="text"
+                  placeholder="Starter, Beginner, Intermediate..."
                   value={formData.level || ''}
-                  onChange={(e) => setFormData({ ...formData, level: Number(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                 />
               </div>
               <div className="hidden sm:block" />
@@ -383,15 +404,25 @@ const ClassesPage = () => {
                 </div>
               </div>
 
-              {/* Time Selection */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="schedule_time">Class Time</Label>
+                <Label htmlFor="schedule_time">Lesson Start Time</Label>
                 <Input
                   id="schedule_time"
                   type="time"
                   value={scheduleTime}
                   onChange={(e) => setScheduleTime(e.target.value)}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="schedule_end_time">Lesson End Time</Label>
+                <Input
+                  id="schedule_end_time"
+                  type="time"
+                  value={scheduleEndTime}
+                  onChange={(e) => setScheduleEndTime(e.target.value)}
+                />
+              </div>
               </div>
             </div>
 

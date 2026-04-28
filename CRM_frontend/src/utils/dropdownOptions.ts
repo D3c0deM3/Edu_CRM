@@ -52,7 +52,7 @@ export const fetchClasses = async (): Promise<DropdownOption[]> => {
     console.log('Classes fetched:', classList);
     return classList.map((cls: any) => ({
       id: cls.class_id || cls.id,
-      label: `${cls.class_name} - ${cls.level}${cls.section ? ' ' + cls.section : ''}`,
+      label: `${cls.class_name}${cls.level ? ` - ${cls.level}` : ''}`,
       value: cls.class_id || cls.id,
     }));
   } catch (error) {
@@ -190,8 +190,5 @@ export const termOptions: DropdownOption[] = [
 
 // Currency options
 export const currencyOptions: DropdownOption[] = [
-  { id: 1, label: 'USD', value: 'USD' },
-  { id: 2, label: 'EUR', value: 'EUR' },
-  { id: 3, label: 'GBP', value: 'GBP' },
-  { id: 4, label: 'AUD', value: 'AUD' },
+  { id: 1, label: "UZS / so'm", value: 'UZS' },
 ];

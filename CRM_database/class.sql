@@ -8,7 +8,7 @@ CREATE TABLE classes (
     center_id INT NOT NULL,
     class_name VARCHAR(100) NOT NULL,
     class_code VARCHAR(50) NOT NULL UNIQUE,
-    level INT,
+    level VARCHAR(100),
     section TEXT,
     capacity INT,
     teacher_id INT,
@@ -24,5 +24,4 @@ CREATE TABLE classes (
 
 CREATE INDEX idx_class_code ON classes(class_code);
 CREATE INDEX idx_level ON classes(level);
-
 

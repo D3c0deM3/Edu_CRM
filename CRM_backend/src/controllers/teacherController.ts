@@ -90,10 +90,21 @@ exports.createTeacher = async (req: any, res: any) => {
 exports.updateTeacher = async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    const { first_name, last_name, email, phone, status, roles } = req.body;
+    const {
+      first_name,
+      last_name,
+      email,
+      phone,
+      date_of_birth,
+      gender,
+      qualification,
+      specialization,
+      status,
+      roles,
+    } = req.body;
     const result = await pool.query(
-      'UPDATE teachers SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), phone = COALESCE($4, phone), status = COALESCE($5, status), roles = COALESCE($6, roles), updated_at = CURRENT_TIMESTAMP WHERE teacher_id = $7 RETURNING *',
-      [first_name, last_name, email, phone, status, roles ? JSON.stringify(roles) : null, id]
+      'UPDATE teachers SET first_name = COALESCE($1, first_name), last_name = COALESCE($2, last_name), email = COALESCE($3, email), phone = COALESCE($4, phone), date_of_birth = COALESCE($5, date_of_birth), gender = COALESCE($6, gender), qualification = COALESCE($7, qualification), specialization = COALESCE($8, specialization), status = COALESCE($9, status), roles = COALESCE($10, roles), updated_at = CURRENT_TIMESTAMP WHERE teacher_id = $11 RETURNING *',
+      [first_name, last_name, email, phone, date_of_birth || null, gender, qualification, specialization, status, roles ? JSON.stringify(roles) : null, id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Teacher not found' });

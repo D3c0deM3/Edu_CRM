@@ -1,4 +1,5 @@
-import { Pencil, Trash2, Plus, Loader2 } from 'lucide-react';
+import React from 'react';
+import { Pencil, Trash2, Plus, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -92,13 +93,15 @@ interface CRUDFormProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
-  fields: Array<{ name: string; label: string; type?: 'text' | 'email' | 'tel' | 'date' | 'select'; required?: boolean; options?: Array<{ label: string; value: any }>; }>;
+  fields: Array<{ name: string; label: string; type?: 'text' | 'email' | 'tel' | 'date' | 'password' | 'select'; required?: boolean; options?: Array<{ label: string; value: any }>; }>;
   data: any;
   setData: (data: any) => void;
   loading?: boolean;
 }
 
 export const CRUDForm: React.FC<CRUDFormProps> = ({ title, open, onClose, onSubmit, fields, data, setData, loading = false }) => {
+  const [visiblePasswords, setVisiblePasswords] = React.useState<Record<string, boolean>>({});
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -112,6 +115,27 @@ export const CRUDForm: React.FC<CRUDFormProps> = ({ title, open, onClose, onSubm
                   <option value="">Select {field.label}</option>
                   {field.options?.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                 </select>
+              ) : field.type === 'password' ? (
+                <div className="relative">
+                  <Input
+                    id={field.name}
+                    type={visiblePasswords[field.name] ? 'text' : 'password'}
+                    value={data[field.name] || ''}
+                    onChange={(e) => setData({ ...data, [field.name]: e.target.value })}
+                    required={field.required}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVisiblePasswords((prev) => ({ ...prev, [field.name]: !prev[field.name] }))
+                    }
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={visiblePasswords[field.name] ? 'Hide password' : 'Show password'}
+                  >
+                    {visiblePasswords[field.name] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               ) : (
                 <Input id={field.name} type={field.type || 'text'} value={data[field.name] || ''} onChange={(e) => setData({ ...data, [field.name]: e.target.value })} required={field.required} />
               )}

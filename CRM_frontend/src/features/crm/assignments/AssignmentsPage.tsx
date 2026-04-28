@@ -410,7 +410,7 @@ const AssignmentsPage = () => {
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="mr-1 h-4 w-4" />
-              Filters
+              Filter
               {hasActiveFilters && (
                 <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
                   {filterStatus ? 1 : 0}

@@ -3,6 +3,7 @@ const cryptoModule = require('crypto');
 const { notifyParentsAboutAttendance } = require('../services/parentBotService');
 
 const DEFAULT_ATTENDANCE_STATUS = 'Present';
+const ABSENT_ATTENDANCE_STATUS = 'Absent';
 const DEFAULT_QR_EXPIRY_MINUTES = 10;
 const MIN_QR_EXPIRY_MINUTES = 1;
 const MAX_QR_EXPIRY_MINUTES = 120;
@@ -78,6 +79,7 @@ const ensureQrAttendanceSchema = async (): Promise<void> => {
           attendance_date DATE NOT NULL,
           room_number_snapshot VARCHAR(50),
           is_active BOOLEAN NOT NULL DEFAULT TRUE,
+          finalized_at TIMESTAMP,
           expires_at TIMESTAMP NOT NULL,
           location_required BOOLEAN NOT NULL DEFAULT FALSE,
           location_latitude NUMERIC(10, 7),
@@ -87,6 +89,11 @@ const ensureQrAttendanceSchema = async (): Promise<void> => {
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_sessions
+        ADD COLUMN IF NOT EXISTS finalized_at TIMESTAMP
       `);
 
       await db.query(`
@@ -172,6 +179,106 @@ const getQrSessionByToken = async (sessionToken: string) => {
   );
 
   return result.rows[0] || null;
+};
+
+const finalizeQrAttendanceSession = async (client: any, session: any) => {
+  if (session.finalized_at) {
+    return [];
+  }
+
+  const absentStudents = await client.query(
+    `
+      SELECT s.student_id
+      FROM students s
+      LEFT JOIN attendance_qr_checkins qc
+        ON qc.student_id = s.student_id
+       AND qc.session_id = $2
+      LEFT JOIN attendance a
+        ON a.student_id = s.student_id
+       AND a.class_id = $1
+       AND a.attendance_date = $3
+      WHERE s.class_id = $1
+        AND qc.qr_checkin_id IS NULL
+        AND a.attendance_id IS NULL
+    `,
+    [session.class_id, session.session_id, session.attendance_date]
+  );
+
+  const finalizedAttendance: any[] = [];
+  for (const student of absentStudents.rows) {
+    const attendance = await upsertAttendanceRecord(client, {
+      student_id: Number(student.student_id),
+      teacher_id: Number(session.teacher_id),
+      class_id: Number(session.class_id),
+      attendance_date: String(session.attendance_date).split('T')[0],
+      status: ABSENT_ATTENDANCE_STATUS,
+      remarks: 'Missed QR attendance deadline',
+    });
+    finalizedAttendance.push(attendance);
+  }
+
+  await client.query(
+    `
+      UPDATE attendance_qr_sessions
+      SET is_active = FALSE,
+          finalized_at = COALESCE(finalized_at, CURRENT_TIMESTAMP),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE session_id = $1
+    `,
+    [session.session_id]
+  );
+
+  return finalizedAttendance;
+};
+
+const finalizeExpiredQrAttendanceSessions = async (centerId: number, teacherId?: number | null) => {
+  const client = await db.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const values: any[] = [centerId];
+    const filters = [
+      'center_id = $1',
+      'is_active = TRUE',
+      'expires_at <= LOCALTIMESTAMP',
+      'finalized_at IS NULL',
+    ];
+
+    if (teacherId) {
+      values.push(teacherId);
+      filters.push(`teacher_id = $${values.length}`);
+    }
+
+    const expiredSessions = await client.query(
+      `
+        SELECT *
+        FROM attendance_qr_sessions
+        WHERE ${filters.join(' AND ')}
+        ORDER BY expires_at ASC
+      `,
+      values
+    );
+
+    const finalizedAttendance: any[] = [];
+    for (const session of expiredSessions.rows) {
+      finalizedAttendance.push(...(await finalizeQrAttendanceSession(client, session)));
+    }
+
+    await client.query('COMMIT');
+
+    finalizedAttendance.forEach((attendance) => {
+      void notifyParentsAboutAttendance(attendance, {
+        source: 'qr',
+        eventKey: `attendance-qr-absent:${attendance.attendance_id}:${attendance.attendance_date}`,
+      });
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 const upsertAttendanceRecord = async (
@@ -875,6 +982,11 @@ exports.getQrAttendanceSessions = async (req: any, res: any) => {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
     }
 
+    await finalizeExpiredQrAttendanceSessions(
+      Number(centerId),
+      req.user?.userType === 'teacher' ? Number(req.user.id) : null
+    );
+
     const filters: string[] = ['s.center_id = $1'];
     const values: any[] = [centerId];
 
@@ -948,6 +1060,10 @@ exports.getQrAttendanceSession = async (req: any, res: any) => {
 
     if (isSuperuser && Number(session.center_id) !== Number(req.user.center_id)) {
       return res.status(403).json({ error: 'You can only view QR sessions for your own center.' });
+    }
+
+    if (session.is_active && new Date(session.expires_at).getTime() <= Date.now() && !session.finalized_at) {
+      await finalizeExpiredQrAttendanceSessions(Number(session.center_id), null);
     }
 
     const active = Boolean(session.active);
@@ -1035,6 +1151,8 @@ exports.getQrAttendanceSession = async (req: any, res: any) => {
 };
 
 exports.closeQrAttendanceSession = async (req: any, res: any) => {
+  const client = await db.connect();
+
   try {
     await ensureQrAttendanceSchema();
 
@@ -1053,26 +1171,35 @@ exports.closeQrAttendanceSession = async (req: any, res: any) => {
       return res.status(403).json({ error: 'You can only close QR sessions for your own center.' });
     }
 
-    const result = await db.query(
-      `
-        UPDATE attendance_qr_sessions
-        SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
-        WHERE session_token = $1
-        RETURNING *
-      `,
+    await client.query('BEGIN');
+    const finalizedAttendance = await finalizeQrAttendanceSession(client, session);
+    const result = await client.query(
+      'SELECT * FROM attendance_qr_sessions WHERE session_token = $1',
       [sessionToken]
     );
+    await client.query('COMMIT');
+
+    finalizedAttendance.forEach((attendance) => {
+      void notifyParentsAboutAttendance(attendance, {
+        source: 'qr',
+        eventKey: `attendance-qr-absent:${attendance.attendance_id}:${attendance.attendance_date}`,
+      });
+    });
 
     res.json({
-      message: 'QR attendance session closed successfully',
+      message: `QR attendance session closed successfully. ${finalizedAttendance.length} absent records saved.`,
       session: result.rows[0],
+      absent_saved: finalizedAttendance.length,
     });
   } catch (error: any) {
+    await client.query('ROLLBACK');
     console.error('Database error:', error);
     res.status(500).json({
       error: 'Failed to close QR attendance session',
       details: error.message || error.toString(),
     });
+  } finally {
+    client.release();
   }
 };
 
@@ -1295,7 +1422,7 @@ exports.checkInWithQrAttendanceSession = async (req: any, res: any) => {
       });
     }
 
-    void notifyParentsAboutAttendance(attendanceRecord, {
+    await notifyParentsAboutAttendance(attendanceRecord, {
       source: 'qr',
       exactTimestamp: checkInResult.rows[0]?.checked_in_at || new Date(),
       eventKey: `attendance-qr:${session.session_id}:${attendanceRecord.attendance_id}`,

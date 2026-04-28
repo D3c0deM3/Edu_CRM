@@ -21,7 +21,7 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 const TRANSLATABLE_ATTRIBUTES = ['placeholder', 'title', 'aria-label'] as const;
 
-const isIgnoredElement = (element: Element | null): boolean => {
+const isIgnoredTextElement = (element: Element | null): boolean => {
   if (!element) {
     return true;
   }
@@ -31,7 +31,20 @@ const isIgnoredElement = (element: Element | null): boolean => {
   }
 
   const tagName = element.tagName.toLowerCase();
-  return ['script', 'style', 'textarea', 'input', 'option'].includes(tagName);
+  return ['script', 'style', 'textarea', 'input'].includes(tagName);
+};
+
+const isIgnoredAttributeElement = (element: Element | null): boolean => {
+  if (!element) {
+    return true;
+  }
+
+  if (element.closest('[data-no-translate="true"]')) {
+    return true;
+  }
+
+  const tagName = element.tagName.toLowerCase();
+  return ['script', 'style'].includes(tagName);
 };
 
 const useAutoTranslateDocument = (language: LanguageCode) => {
@@ -48,7 +61,7 @@ const useAutoTranslateDocument = (language: LanguageCode) => {
         : Array.from(root.querySelectorAll<HTMLElement>('[placeholder], [title], [aria-label]'));
 
     elements.forEach((element) => {
-      if (isIgnoredElement(element)) {
+      if (isIgnoredAttributeElement(element)) {
         return;
       }
 
@@ -82,7 +95,7 @@ const useAutoTranslateDocument = (language: LanguageCode) => {
           return NodeFilter.FILTER_REJECT;
         }
 
-        if (isIgnoredElement(textNode.parentElement)) {
+        if (isIgnoredTextElement(textNode.parentElement)) {
           return NodeFilter.FILTER_REJECT;
         }
 

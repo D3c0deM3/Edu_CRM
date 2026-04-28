@@ -20,6 +20,8 @@ const subjectController = require('../controllers/subjectController');
  */
 router_subject.get('/', subjectController.getAllSubjects);
 
+router_subject.get('/class/:classId', subjectController.getSubjectsByClass);
+
 /**
  * @swagger
  * /subjects/{id}:
@@ -68,8 +70,6 @@ router_subject.get('/:id', subjectController.getSubjectById);
  *       404:
  *         description: Class not found
  */
-router_subject.get('/class/:classId', subjectController.getSubjectsByClass);
-
 /**
  * @swagger
  * /subjects:

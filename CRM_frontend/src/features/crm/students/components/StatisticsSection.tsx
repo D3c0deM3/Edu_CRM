@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, DollarSign, CheckCircle, Star } from 'lucide-react';
+import { formatCurrency } from '../../../../utils/helpers';
 
 interface StatisticsSectionProps {
   attendanceStats: {
@@ -59,7 +60,7 @@ export const StatisticsSection = ({
     },
     {
       label: 'Payments',
-      value: `$${(Number(paymentStats.totalAmount) || 0).toFixed(2)}`,
+      value: formatCurrency(Number(paymentStats.totalAmount) || 0, 'UZS'),
       sub: `${paymentStats.completed} completed`,
     },
     {

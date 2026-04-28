@@ -21,6 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useCRUD } from '../hooks/useCRUD';
+import { useAppSelector } from '../hooks';
+import type { RootState } from '../../../store';
 import { subjectAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
 import { fetchClasses, fetchTeachers } from '../../../utils/dropdownOptions';
@@ -37,6 +39,8 @@ interface Subject {
 }
 
 const SubjectsPage = () => {
+  const { user } = useAppSelector((state: RootState) => state.auth);
+  const isTeacher = user?.userType === 'teacher';
   const [state, actions] = useCRUD<Subject>(subjectAPI, 'Subject');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -79,6 +83,7 @@ const SubjectsPage = () => {
       setFormData({
         total_marks: 100,
         passing_marks: 40,
+        teacher_id: isTeacher ? Number(user?.id) : undefined,
       });
     }
     setIsModalOpen(true);
@@ -90,15 +95,20 @@ const SubjectsPage = () => {
     setFormData({
       total_marks: 100,
       passing_marks: 40,
+      teacher_id: isTeacher ? Number(user?.id) : undefined,
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = {
+      ...formData,
+      teacher_id: isTeacher ? Number(user?.id) : formData.teacher_id,
+    };
     if (editingId) {
-      await actions.update(editingId, formData);
+      await actions.update(editingId, payload);
     } else {
-      await actions.create(formData);
+      await actions.create(payload);
     }
     handleCloseModal();
   };
@@ -235,17 +245,19 @@ const SubjectsPage = () => {
                 required
                 placeholder="Select a class"
               />
-              <SelectField
-                label="Teacher"
-                name="teacher_id"
-                value={formData.teacher_id || ''}
-                onChange={(value) =>
-                  setFormData({ ...formData, teacher_id: value ? Number(value) : undefined })
-                }
-                options={teacherOptions}
-                isLoading={isLoadingOptions}
-                placeholder="Select a teacher (optional)"
-              />
+              {!isTeacher && (
+                <SelectField
+                  label="Teacher"
+                  name="teacher_id"
+                  value={formData.teacher_id || ''}
+                  onChange={(value) =>
+                    setFormData({ ...formData, teacher_id: value ? Number(value) : undefined })
+                  }
+                  options={teacherOptions}
+                  isLoading={isLoadingOptions}
+                  placeholder="Select a teacher"
+                />
+              )}
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">

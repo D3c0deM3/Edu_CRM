@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { studentAPI, attendanceAPI, gradeAPI } from '../../../shared/api/api';
 import { showToast } from '../../../utils/toast';
 import { fetchSubjects } from '../../../utils/dropdownOptions';
+import { formatCurrency } from '../../../utils/helpers';
 import ClassCalendar from './ClassCalendar';
 
 interface Class {
@@ -31,13 +32,16 @@ interface Class {
   center_id: number;
   class_name: string;
   class_code: string;
-  level: number;
+  level: string | number;
   section?: string;
   capacity: number;
   teacher_id?: number;
   room_number: string;
   payment_amount: number;
   payment_frequency: string;
+  teacher_name?: string | null;
+  teacher_first_name?: string | null;
+  teacher_last_name?: string | null;
   schedule?: string; // JSON string: { days: ['Monday', 'Wednesday', 'Friday'], time: '10:00' }
 }
 
@@ -284,7 +288,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ open, classData, on
   if (!classData) return null;
 
   // Parse schedule from section field
-  let parsedSchedule = { days: [] as string[], time: '' };
+  let parsedSchedule = { days: [] as string[], time: '', endTime: '' };
   if (classData.section) {
     try {
       parsedSchedule = JSON.parse(classData.section);
@@ -297,14 +301,9 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ open, classData, on
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex justify-between items-center">
-            <DialogTitle className="text-xl font-bold">
-              {classData.class_name} ({classData.class_code})
-            </DialogTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-bold">
+            {classData.class_name} ({classData.class_code})
+          </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="info" className="mt-2">
@@ -329,8 +328,18 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ open, classData, on
                   <p className="font-semibold">{classData.level}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">Teacher</p>
+                  <p className="font-semibold">
+                    {classData.teacher_name ||
+                      [classData.teacher_first_name, classData.teacher_last_name].filter(Boolean).join(' ') ||
+                      'Not assigned'}
+                  </p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">Section</p>
-                  <p className="font-semibold">{classData.section}</p>
+                  <p className="font-semibold">
+                    {parsedSchedule.days?.length ? parsedSchedule.days.join(', ') : classData.section || 'Not set'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Capacity</p>
@@ -343,7 +352,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ open, classData, on
                 <div>
                   <p className="text-sm text-muted-foreground">Payment Amount</p>
                   <p className="font-semibold">
-                    ${classData.payment_amount} ({classData.payment_frequency})
+                    {formatCurrency(Number(classData.payment_amount || 0), 'UZS')} ({classData.payment_frequency})
                   </p>
                 </div>
               </div>
@@ -357,7 +366,10 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ open, classData, on
                       <strong>Days:</strong> {parsedSchedule.days.join(', ')}
                     </p>
                     <p className="text-sm">
-                      <strong>Time:</strong> {parsedSchedule.time}
+                      <strong>Start:</strong> {parsedSchedule.time || 'Not set'}
+                    </p>
+                    <p className="text-sm">
+                      <strong>End:</strong> {parsedSchedule.endTime || 'Not set'}
                     </p>
                   </div>
                 ) : (

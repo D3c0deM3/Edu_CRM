@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 interface Schedule {
   days: string[];
   time: string;
+  endTime?: string;
 }
 
 interface ClassCalendarProps {
@@ -83,7 +84,9 @@ const ClassCalendar: React.FC<ClassCalendarProps> = ({ schedule }) => {
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold">{schedule.time}</span>
+                <span className="text-sm font-semibold">
+                  {schedule.time}{schedule.endTime ? ` - ${schedule.endTime}` : ''}
+                </span>
               </div>
             </div>
           ) : (
@@ -152,7 +155,7 @@ const ClassCalendar: React.FC<ClassCalendarProps> = ({ schedule }) => {
                       <div className="w-full flex flex-col items-center gap-0.5">
                         <div className="w-full h-0.5 bg-primary-foreground rounded" />
                         <span className="text-[0.65rem] font-semibold text-primary-foreground text-center">
-                          {schedule.time}
+                          {schedule.time}{schedule.endTime ? `-${schedule.endTime}` : ''}
                         </span>
                       </div>
                     )}
