@@ -97,6 +97,41 @@ const ensureQrAttendanceSchema = async (): Promise<void> => {
       `);
 
       await db.query(`
+        ALTER TABLE attendance_qr_sessions
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_sessions
+        ADD COLUMN IF NOT EXISTS room_number_snapshot VARCHAR(50)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_sessions
+        ADD COLUMN IF NOT EXISTS location_required BOOLEAN NOT NULL DEFAULT FALSE
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_sessions
+        ADD COLUMN IF NOT EXISTS location_latitude NUMERIC(10, 7)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_sessions
+        ADD COLUMN IF NOT EXISTS location_longitude NUMERIC(10, 7)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_sessions
+        ADD COLUMN IF NOT EXISTS location_accuracy_meters NUMERIC(8, 2)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_sessions
+        ADD COLUMN IF NOT EXISTS location_radius_meters NUMERIC(8, 2)
+      `);
+
+      await db.query(`
         CREATE TABLE IF NOT EXISTS attendance_qr_checkins (
           qr_checkin_id SERIAL PRIMARY KEY,
           session_id INT NOT NULL REFERENCES attendance_qr_sessions(session_id) ON DELETE CASCADE,
@@ -121,6 +156,46 @@ const ensureQrAttendanceSchema = async (): Promise<void> => {
       await db.query(`
         CREATE INDEX IF NOT EXISTS idx_attendance_qr_sessions_expires_at
         ON attendance_qr_sessions(expires_at)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_checkins
+        ADD COLUMN IF NOT EXISTS attendance_id INT REFERENCES attendance(attendance_id) ON DELETE SET NULL
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_checkins
+        ADD COLUMN IF NOT EXISTS checked_in_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_checkins
+        ADD COLUMN IF NOT EXISTS latitude NUMERIC(10, 7)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_checkins
+        ADD COLUMN IF NOT EXISTS longitude NUMERIC(10, 7)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_checkins
+        ADD COLUMN IF NOT EXISTS accuracy_meters NUMERIC(8, 2)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_checkins
+        ADD COLUMN IF NOT EXISTS distance_meters NUMERIC(8, 2)
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_checkins
+        ADD COLUMN IF NOT EXISTS location_validated BOOLEAN NOT NULL DEFAULT FALSE
+      `);
+
+      await db.query(`
+        ALTER TABLE attendance_qr_checkins
+        ADD COLUMN IF NOT EXISTS device_info TEXT
       `);
 
       await db.query(`
@@ -1000,12 +1075,23 @@ exports.getQrAttendanceSessions = async (req: any, res: any) => {
       filters.push(`s.class_id = $${values.length}`);
     }
 
-    if (req.query.attendance_date) {
-      values.push(req.query.attendance_date);
+    const attendanceDate =
+      typeof req.query.attendance_date === 'string' ? req.query.attendance_date : '';
+
+    if (attendanceDate) {
+      if (!isValidIsoDate(attendanceDate)) {
+        return res.status(400).json({ error: 'attendance_date must be in YYYY-MM-DD format' });
+      }
+
+      values.push(attendanceDate);
       filters.push(`s.attendance_date = $${values.length}`);
     }
 
-    if (req.query.active_only !== 'false') {
+    const activeOnly =
+      req.query.active_only === 'true' ||
+      (!attendanceDate && req.query.active_only !== 'false');
+
+    if (activeOnly) {
       filters.push('s.is_active = TRUE');
       filters.push('s.expires_at > LOCALTIMESTAMP');
     }

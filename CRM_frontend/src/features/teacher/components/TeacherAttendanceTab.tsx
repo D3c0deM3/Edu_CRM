@@ -416,6 +416,7 @@ const TeacherAttendanceTab = ({
       const response = await attendanceAPI.getQrSessions({
         class_id: selectedClass,
         attendance_date: attendanceDate,
+        active_only: false,
       });
       const sessions = Array.isArray(response.data) ? response.data : [];
       const latestSession = sessions.length > 0 ? hydrateQrSession(sessions[0]) : null;

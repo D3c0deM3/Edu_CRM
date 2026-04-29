@@ -77,7 +77,14 @@ const toNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 const formatDate = (date: Date): string => date.toISOString().split('T')[0];
+
+const dateOnlyToUtcDate = (value: string): Date => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+};
 
 const toUtcDate = (value: string | Date): Date => {
   const date = new Date(value);
@@ -338,29 +345,51 @@ const setLocalLanguagePreference = (chatId: number, language: ParentLanguage) =>
   }
 };
 
+const toDisplayDate = (value: string | Date): Date | null => {
+  if (typeof value === 'string' && DATE_ONLY_PATTERN.test(value)) {
+    return dateOnlyToUtcDate(value);
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const formatTashkentDateTime = (
   value: string | Date,
   language: ParentLanguage = 'uz'
-): string =>
-  new Date(value).toLocaleString(language === 'ru' ? 'ru-RU' : 'uz-UZ', {
+): string => {
+  const date = toDisplayDate(value);
+  if (!date) {
+    return '-';
+  }
+
+  return date.toLocaleString(language === 'ru' ? 'ru-RU' : 'uz-UZ', {
     timeZone: 'Asia/Tashkent',
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
+};
 
 const formatTashkentDate = (
   value: string | Date,
   language: ParentLanguage = 'uz'
-): string =>
-  new Date(value).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'uz-UZ', {
+): string => {
+  const date = toDisplayDate(value);
+  if (!date) {
+    return '-';
+  }
+
+  return date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'uz-UZ', {
     timeZone: 'Asia/Tashkent',
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   });
+};
 
 const buildReplyKeyboard = (rows: Array<Array<string | { text: string; request_contact?: boolean }>>) => ({
   keyboard: rows.map((row) =>
@@ -890,7 +919,7 @@ const getChildSummaryText = async (
     `${text.totalPaid}: ${formatMoney(paymentSnapshot?.totalPaid || 0)}`,
     `${text.currentDebt}: ${formatMoney(paymentSnapshot?.currentDebt || 0)}`,
     paymentSnapshot?.nextDueDate
-      ? `${text.nextDueDate}: ${paymentSnapshot.nextDueDate} (${formatMoney(paymentSnapshot.nextDueBalance)})`
+      ? `${text.nextDueDate}: ${formatTashkentDate(paymentSnapshot.nextDueDate, language)} (${formatMoney(paymentSnapshot.nextDueBalance)})`
       : `${text.nextDueDate}: ${text.noUnpaidCycle}`,
   ].join('\n');
 };
@@ -910,7 +939,7 @@ const getAttendanceText = async (
             a.attendance_date,
             a.status,
             a.remarks,
-            COALESCE(qc.checked_in_at, a.updated_at, a.created_at) AS marked_at
+            COALESCE(qc.checked_in_at, a.created_at) AS marked_at
           FROM attendance a
           LEFT JOIN attendance_qr_checkins qc ON qc.attendance_id = a.attendance_id
           WHERE a.student_id = $1
@@ -922,7 +951,7 @@ const getAttendanceText = async (
             a.attendance_date,
             a.status,
             a.remarks,
-            COALESCE(a.updated_at, a.created_at) AS marked_at
+            a.created_at AS marked_at
           FROM attendance a
           WHERE a.student_id = $1
           ORDER BY a.attendance_date DESC, marked_at DESC, a.attendance_id DESC
@@ -1000,14 +1029,14 @@ const getPaymentsText = async (
     `${text.totalPaid}: ${formatMoney(paymentSnapshot.totalPaid)}`,
     `${text.currentDebt}: ${formatMoney(paymentSnapshot.currentDebt)}`,
     paymentSnapshot.nextDueDate
-      ? `${text.nextDueDate}: ${paymentSnapshot.nextDueDate} (${formatMoney(paymentSnapshot.nextDueBalance)})`
+      ? `${text.nextDueDate}: ${formatTashkentDate(paymentSnapshot.nextDueDate, language)} (${formatMoney(paymentSnapshot.nextDueBalance)})`
       : `${text.nextDueDate}: ${text.noNextDueDate}`,
   ];
 
   if (recentPayments.length > 0) {
     lines.push('', text.completedPayments);
     recentPayments.forEach((payment: any) => {
-      lines.push(`${payment.payment_date}: ${formatMoney(toNumber(payment.amount))}`);
+      lines.push(`${formatTashkentDate(payment.payment_date, language)}: ${formatMoney(toNumber(payment.amount))}`);
     });
   }
 
@@ -1375,7 +1404,7 @@ export const runParentPaymentReminderSweep = async () => {
             name: `${student.first_name} ${student.last_name}`,
           }),
           `${text.class}: ${student.class_name || text.noClassAssigned}`,
-          `${text.dueDate}: ${dueCycle.dueDate}`,
+          `${text.dueDate}: ${formatTashkentDate(dueCycle.dueDate, language)}`,
           `${text.amountDue}: ${formatMoney(dueCycle.balance)}`,
           interpolate(text.reminderInfo, { days: warningDays }),
         ].join('\n'),
