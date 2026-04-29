@@ -6,10 +6,26 @@ const {
   prepareStudentParentFields,
   sanitizeStudentForResponse,
 } = require('../services/parentBotService');
+const {
+  assertCenterCanAddStudent,
+  assertCenterHasActiveSubscription,
+} = require('../services/crmSubscriptionService');
 
 // Hash password function
 const hashPassword1 = (password: string) => {
   return cryptoModule1.createHash('sha256').update(password).digest('hex');
+};
+
+const generateEnrollmentNumber = async () => {
+  const result = await student_db.query(`
+    SELECT COALESCE(
+      MAX(NULLIF(regexp_replace(enrollment_number, '[^0-9]', '', 'g'), '')::int),
+      0
+    ) + 1 AS next_number
+    FROM students
+  `);
+
+  return String(result.rows[0]?.next_number || 1);
 };
 
 exports.getAllStudents = async (req: any, res: any) => {
@@ -79,7 +95,6 @@ exports.createStudent = async (req: any, res: any) => {
     await ensureParentBotSchema();
     const {
       center_id,
-      enrollment_number,
       first_name,
       last_name,
       username,
@@ -94,12 +109,21 @@ exports.createStudent = async (req: any, res: any) => {
       teacher_id,
       class_id,
     } = req.body;
+    const resolvedCenterId = req.user?.center_id || center_id;
+
+    if (!resolvedCenterId) {
+      return res.status(400).json({ error: 'center_id is required' });
+    }
+
+    await assertCenterCanAddStudent(resolvedCenterId);
+
     const password_hash = password ? hashPassword1(password) : null;
     const { parentPasswordHash, normalizedParentPhone } = await prepareStudentParentFields(req.body);
+    const enrollment_number = await generateEnrollmentNumber();
     const result = await student_db.query(
       'INSERT INTO students (center_id, enrollment_number, first_name, last_name, username, password_hash, email, phone, date_of_birth, parent_name, parent_phone, parent_password_hash, gender, status, teacher_id, class_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *',
       [
-        center_id,
+        resolvedCenterId,
         enrollment_number,
         first_name,
         last_name,
@@ -120,7 +144,11 @@ exports.createStudent = async (req: any, res: any) => {
     res.status(201).json(sanitizeStudentForResponse(result.rows[0]));
   } catch (error: any) {
     console.error('Database error:', error);
-    res.status(500).json({ error: 'Failed to create student', details: error.message || error.toString() });
+    res.status(error.statusCode || 500).json({
+      error: error.statusCode ? error.message : 'Failed to create student',
+      code: error.code,
+      details: error.statusCode ? undefined : error.message || error.toString(),
+    });
   }
 };
 
@@ -287,7 +315,7 @@ exports.studentLogin = async (req: any, res: any) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const result = await student_db.query('SELECT student_id, first_name, last_name, email, password_hash, status, class_id FROM students WHERE username = $1', [username]);
+    const result = await student_db.query('SELECT student_id, center_id, first_name, last_name, email, password_hash, status, class_id FROM students WHERE username = $1', [username]);
     
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid username or password' });
@@ -304,11 +332,14 @@ exports.studentLogin = async (req: any, res: any) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
+    await assertCenterHasActiveSubscription(student.center_id);
+
     // Generate JWT token
     const token = generateToken({
       id: student.student_id,
       email: student.email,
       userType: 'student',
+      center_id: student.center_id,
       class_id: student.class_id,
     });
 
@@ -320,12 +351,17 @@ exports.studentLogin = async (req: any, res: any) => {
         first_name: student.first_name,
         last_name: student.last_name,
         email: student.email,
+        center_id: student.center_id,
         class_id: student.class_id
       }
     });
   } catch (error: any) {
     console.error('Database error:', error);
-    res.status(500).json({ error: 'Failed to login', details: error.message || error.toString() });
+    res.status(error.statusCode || 500).json({
+      error: error.statusCode ? error.message : 'Failed to login',
+      code: error.code,
+      details: error.statusCode ? undefined : error.message || error.toString(),
+    });
   }
 };
 

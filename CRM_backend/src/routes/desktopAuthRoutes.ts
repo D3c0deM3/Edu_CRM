@@ -104,6 +104,12 @@ router_desktop_auth.post('/login', desktopAuthController.login);
  */
 router_desktop_auth.post('/admin/login', desktopAuthController.adminLogin);
 
+router_desktop_auth.get('/admin/crm-owners', requireDesktopAdmin, desktopAuthController.getCrmOwners);
+router_desktop_auth.post('/admin/crm-owners', requireDesktopAdmin, desktopAuthController.createCrmOwner);
+router_desktop_auth.post('/admin/crm-owners/:centerId/activate', requireDesktopAdmin, desktopAuthController.activateCrmOwner);
+router_desktop_auth.post('/admin/crm-owners/:centerId/deactivate', requireDesktopAdmin, desktopAuthController.deactivateCrmOwner);
+router_desktop_auth.patch('/admin/crm-owners/:centerId', requireDesktopAdmin, desktopAuthController.updateCrmOwner);
+
 /**
  * @swagger
  * /desktop-auth/admin/users:

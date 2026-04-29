@@ -1,6 +1,7 @@
 const pool = require('../../config/dbcon');
 const cryptoModule = require('crypto');
 const { generateToken } = require('../middleware/auth');
+const { assertCenterHasActiveSubscription } = require('../services/crmSubscriptionService');
 import { z } from 'zod';
 
 // Hash password function
@@ -153,6 +154,8 @@ exports.teacherLogin = async (req: any, res: any) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
+    await assertCenterHasActiveSubscription(teacher.center_id);
+
     // Generate JWT token - include center_id so protected endpoints work
     const token = generateToken({
       id: teacher.teacher_id,
@@ -175,7 +178,11 @@ exports.teacherLogin = async (req: any, res: any) => {
     });
   } catch (error: any) {
     console.error('Database error:', error);
-    res.status(500).json({ error: 'Failed to login', details: error.message || error.toString() });
+    res.status(error.statusCode || 500).json({
+      error: error.statusCode ? error.message : 'Failed to login',
+      code: error.code,
+      details: error.statusCode ? undefined : error.message || error.toString(),
+    });
   }
 };
 

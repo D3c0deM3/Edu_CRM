@@ -1,6 +1,7 @@
 const superuser_db = require('../../config/dbcon');
 const cryptoModule2 = require('crypto');
 const { generateToken } = require('../middleware/auth');
+const { assertCenterHasActiveSubscription } = require('../services/crmSubscriptionService');
 
 // Hash password function
 const hashPassword2 = (password: string) => {
@@ -131,6 +132,8 @@ exports.login = async (req: any, res: any) => {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
+    await assertCenterHasActiveSubscription(superuser.center_id);
+
     // Reset login attempts on successful login
     await superuser_db.query('UPDATE superusers SET login_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE superuser_id = $1', [superuser.superuser_id]);
     
@@ -159,7 +162,11 @@ exports.login = async (req: any, res: any) => {
     });
   } catch (error: any) {
     console.error('Database error:', error);
-    res.status(500).json({ error: 'Failed to login', details: error.message || error.toString() });
+    res.status(error.statusCode || 500).json({
+      error: error.statusCode ? error.message : 'Failed to login',
+      code: error.code,
+      details: error.statusCode ? undefined : error.message || error.toString(),
+    });
   }
 };
 

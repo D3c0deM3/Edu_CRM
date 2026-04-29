@@ -177,6 +177,7 @@ const StudentsPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = { ...formData };
+    delete payload.enrollment_number;
     if (editingId && !payload.password) delete payload.password;
     if (editingId && !payload.parent_password) delete payload.parent_password;
     payload.date_of_birth = toDateInputValue(payload.date_of_birth);
@@ -591,15 +592,6 @@ const StudentsPage = () => {
                     required
                     value={formData.last_name || ''}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="enrollment_number">Enrollment Number *</Label>
-                  <Input
-                    id="enrollment_number"
-                    required
-                    value={formData.enrollment_number || ''}
-                    onChange={(e) => setFormData({ ...formData, enrollment_number: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">

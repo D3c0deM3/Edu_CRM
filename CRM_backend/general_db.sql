@@ -96,6 +96,11 @@ CREATE TABLE edu_centers (
     address TEXT,
     city VARCHAR(100),
     principal_name VARCHAR(100),
+    subscription_status VARCHAR(20) NOT NULL DEFAULT 'active',
+    subscription_activated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    subscription_expires_at TIMESTAMPTZ DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+    subscription_days INT NOT NULL DEFAULT 30,
+    student_limit INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

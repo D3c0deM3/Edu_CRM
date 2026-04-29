@@ -54,7 +54,6 @@ const OwnerManager = memo(() => {
 
   const studentFields = [
     { name: 'center_id', label: 'Center ID', type: 'number', required: true },
-    { name: 'enrollment_number', label: 'Enrollment Number', type: 'text', required: true },
     { name: 'first_name', label: 'First Name', type: 'text', required: true },
     { name: 'last_name', label: 'Last Name', type: 'text', required: true },
     { name: 'email', label: 'Email', type: 'email', required: true },

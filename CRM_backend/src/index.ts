@@ -4,6 +4,7 @@ require('dotenv/config');
 const swaggerUI = require('swagger-ui-express');
 const swaggerDocs = require('./swagger/swagger');
 const { requireAuth, requireRole } = require('./middleware/auth');
+const { requireActiveCenterSubscription } = require('./services/crmSubscriptionService');
 
 // Import routes
 const studentRoutes = require('./routes/studentRoutes');
@@ -76,43 +77,43 @@ app.use('/api/desktop-auth', desktopAuthRoutes);
 
 // Protected routes - require authentication + role-based access
 // Students: superuser and teacher can manage; students can view own data via portal
-app.use('/api/students', requireAuth, requireRole('superuser', 'teacher'), studentRoutes);
+app.use('/api/students', requireAuth, requireActiveCenterSubscription, requireRole('superuser', 'teacher'), studentRoutes);
 
 // Teachers: superuser manages; teachers read
-app.use('/api/teachers', requireAuth, requireRole('superuser', 'teacher'), teacherRoutes);
+app.use('/api/teachers', requireAuth, requireActiveCenterSubscription, requireRole('superuser', 'teacher'), teacherRoutes);
 
 // Classes: superuser and teacher
-app.use('/api/classes', requireAuth, requireRole('superuser', 'teacher'), classRoutes);
+app.use('/api/classes', requireAuth, requireActiveCenterSubscription, requireRole('superuser', 'teacher'), classRoutes);
 
 // Centers: superuser manages; teachers read
-app.use('/api/centers', requireAuth, requireRole('superuser', 'teacher'), centerRoutes);
+app.use('/api/centers', requireAuth, requireActiveCenterSubscription, requireRole('superuser', 'teacher'), centerRoutes);
 
 // Payments: superuser only
-app.use('/api/payments', requireAuth, requireRole('superuser'), paymentRoutes);
+app.use('/api/payments', requireAuth, requireActiveCenterSubscription, requireRole('superuser'), paymentRoutes);
 
 // Debts: superuser only
-app.use('/api/debts', requireAuth, requireRole('superuser'), debtRoutes);
+app.use('/api/debts', requireAuth, requireActiveCenterSubscription, requireRole('superuser'), debtRoutes);
 
 // Teacher salaries: superuser only
-app.use('/api/teacher-salaries', requireAuth, requireRole('superuser'), teacherSalaryRoutes);
+app.use('/api/teacher-salaries', requireAuth, requireActiveCenterSubscription, requireRole('superuser'), teacherSalaryRoutes);
 
 // Grades: superuser and teacher manage; students can read their own
-app.use('/api/grades', requireAuth, requireRole('superuser', 'teacher', 'student'), gradeRoutes);
+app.use('/api/grades', requireAuth, requireActiveCenterSubscription, requireRole('superuser', 'teacher', 'student'), gradeRoutes);
 
 // Attendance: superuser and teacher manage; students can read their own
-app.use('/api/attendance', requireAuth, requireRole('superuser', 'teacher', 'student'), attendanceRoutes);
+app.use('/api/attendance', requireAuth, requireActiveCenterSubscription, requireRole('superuser', 'teacher', 'student'), attendanceRoutes);
 
 // Assignments: superuser and teacher
-app.use('/api/assignments', requireAuth, requireRole('superuser', 'teacher'), assignmentRoutes);
+app.use('/api/assignments', requireAuth, requireActiveCenterSubscription, requireRole('superuser', 'teacher'), assignmentRoutes);
 
 // Subjects: superuser and teacher
-app.use('/api/subjects', requireAuth, requireRole('superuser', 'teacher'), subjectRoutes);
+app.use('/api/subjects', requireAuth, requireActiveCenterSubscription, requireRole('superuser', 'teacher'), subjectRoutes);
 
 // Superusers: superuser only for management
-app.use('/api/superusers', requireAuth, requireRole('superuser'), superuserRoutes);
+app.use('/api/superusers', requireAuth, requireActiveCenterSubscription, requireRole('superuser'), superuserRoutes);
 
 // Tests: authenticated users (role checks are more granular inside routes)
-app.use('/api/tests', requireAuth, testRoutes);
+app.use('/api/tests', requireAuth, requireActiveCenterSubscription, testRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: any, res: any, next: any): void => {

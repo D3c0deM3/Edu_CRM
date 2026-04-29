@@ -273,6 +273,14 @@ export const authAPI = {
 export const desktopAdminAPI = {
   login: (credentials: { username: string; password: string }) =>
     desktopAdminClient.post('/desktop-auth/admin/login', credentials),
+  getCrmOwners: () => desktopAdminClient.get('/desktop-auth/admin/crm-owners'),
+  createCrmOwner: (data: any) => desktopAdminClient.post('/desktop-auth/admin/crm-owners', data),
+  activateCrmOwner: (centerId: number, data?: { subscription_days?: number; student_limit?: number | null }) =>
+    desktopAdminClient.post(`/desktop-auth/admin/crm-owners/${centerId}/activate`, data || {}),
+  deactivateCrmOwner: (centerId: number) =>
+    desktopAdminClient.post(`/desktop-auth/admin/crm-owners/${centerId}/deactivate`),
+  updateCrmOwner: (centerId: number, data: { subscription_days?: number; student_limit?: number | null }) =>
+    desktopAdminClient.patch(`/desktop-auth/admin/crm-owners/${centerId}`, data),
   getUsers: () => desktopAdminClient.get('/desktop-auth/admin/users'),
   activateUser: (id: number) => desktopAdminClient.post(`/desktop-auth/admin/users/${id}/activate`),
   deactivateUser: (id: number) => desktopAdminClient.post(`/desktop-auth/admin/users/${id}/deactivate`),
