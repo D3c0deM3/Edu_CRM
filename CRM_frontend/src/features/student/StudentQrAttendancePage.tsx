@@ -47,6 +47,11 @@ interface StudentSessionResponse {
   } | null;
 }
 
+const quietQrRequest = {
+  silentErrorToast: true,
+  silentSuccessToast: true,
+};
+
 const requestBrowserPosition = (
   options: PositionOptions
 ): Promise<GeolocationPosition> =>
@@ -134,7 +139,7 @@ const StudentQrAttendancePage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await attendanceAPI.getQrSession(sessionToken);
+      const response = await attendanceAPI.getQrSession(sessionToken, quietQrRequest);
       setSessionData(response.data);
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Unable to load this QR attendance session.');
@@ -177,7 +182,7 @@ const StudentQrAttendancePage = () => {
         ? await getCurrentPosition()
         : {};
 
-      await attendanceAPI.checkInQrSession(sessionToken, payload);
+      await attendanceAPI.checkInQrSession(sessionToken, payload, quietQrRequest);
       await loadSession();
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || 'Unable to complete attendance check-in.');

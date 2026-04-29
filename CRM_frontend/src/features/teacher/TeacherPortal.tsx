@@ -127,21 +127,48 @@ const TeacherPortal = () => {
       const attendance = attendanceRes.data || [];
       const assignments = assignmentsRes.data || [];
       const gradeList = gradesRes.data || [];
+      const teacherId = Number(user?.id);
+      const myClassIds = new Set(
+        (Array.isArray(classList) ? classList : [])
+          .map((cls: any) => Number(cls.class_id || cls.id))
+          .filter(Boolean)
+      );
+      const myStudents = (Array.isArray(students) ? students : []).filter((student: any) => (
+        !teacherId ||
+        Number(student.teacher_id) === teacherId ||
+        myClassIds.has(Number(student.class_id))
+      ));
+      const myStudentIds = new Set(myStudents.map((student: any) => Number(student.student_id || student.id)));
+      const myAttendance = (Array.isArray(attendance) ? attendance : []).filter((record: any) => (
+        !teacherId ||
+        Number(record.teacher_id) === teacherId ||
+        myClassIds.has(Number(record.class_id)) ||
+        myStudentIds.has(Number(record.student_id))
+      ));
+      const myAssignments = (Array.isArray(assignments) ? assignments : []).filter((assignment: any) => (
+        !teacherId || myClassIds.has(Number(assignment.class_id))
+      ));
+      const myGrades = (Array.isArray(gradeList) ? gradeList : []).filter((grade: any) => (
+        !teacherId ||
+        Number(grade.teacher_id) === teacherId ||
+        myClassIds.has(Number(grade.class_id)) ||
+        myStudentIds.has(Number(grade.student_id))
+      ));
 
       setClasses(Array.isArray(classList) ? classList : []);
-      setGrades(Array.isArray(gradeList) ? gradeList : []);
+      setGrades(myGrades);
 
       const today = new Date().toISOString().split('T')[0];
-      const todayAtt = attendance.filter((a: any) => a.attendance_date?.split('T')[0] === today);
+      const todayAtt = myAttendance.filter((a: any) => a.attendance_date?.split('T')[0] === today);
       const presentToday = todayAtt.filter((a: any) => a.status === 'Present' || a.status === 'present').length;
 
       const pendingTests = tests.filter((t: any) => t.is_active).length;
       const completedTests = tests.length - pendingTests;
       const pendingGrading = tests.filter((t: any) => (t.submission_count || 0) > 0).length;
-      const pendingAssignments = assignments.filter((a: any) => a.status === 'Pending' || a.status === 'Active').length;
+      const pendingAssignments = myAssignments.filter((a: any) => a.status === 'Pending' || a.status === 'Active').length;
 
       setStats({
-        totalStudents: students.length,
+        totalStudents: myStudents.length,
         totalClasses: classList.length,
         pendingTests,
         completedTests,
@@ -157,7 +184,7 @@ const TeacherPortal = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadStats();
@@ -242,7 +269,7 @@ const TeacherPortal = () => {
   }
 
   return (
-    <div className="relative space-y-4 p-4 sm:space-y-5 sm:p-5">
+    <div className="relative space-y-5 px-4 pb-8 pt-6 sm:space-y-6 sm:px-5 sm:pb-10 sm:pt-8">
 
       {/* ──── Header Banner ──── */}
       <div className="animate-fade-in-down rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-500 animate-gradient text-white relative overflow-hidden">
@@ -251,14 +278,14 @@ const TeacherPortal = () => {
         <div className="absolute left-1/2 top-0 w-[300px] h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
         <div className="relative z-10 py-6 px-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold bg-white/20 border border-white/30 backdrop-blur-sm">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="w-16 h-16 shrink-0 rounded-2xl flex items-center justify-center text-2xl font-bold bg-white/20 border border-white/30 backdrop-blur-sm">
                 {user?.first_name?.[0]}{user?.last_name?.[0]}
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-white/70 text-sm">Welcome back,</p>
-                <h2 className="text-2xl sm:text-3xl font-bold">{user?.first_name} {user?.last_name}</h2>
-                <div className="flex items-center gap-2 mt-1">
+                <h2 className="truncate text-2xl sm:text-3xl font-bold">{user?.first_name} {user?.last_name}</h2>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
                   <Badge className="bg-white/20 text-white border-none text-xs">Teacher</Badge>
                   {user?.roles && Array.isArray(user.roles) && user.roles.map((role: string) => (
                     <Badge key={role} className="bg-white/15 text-white border-none text-xs">{role}</Badge>
@@ -268,7 +295,7 @@ const TeacherPortal = () => {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 self-start sm:self-center">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -483,13 +510,13 @@ const TeacherPortal = () => {
       {/* ──── Tabs Section ──── */}
       <Card className="animate-fade-in-up stagger-6">
         <Tabs value={tabValue} onValueChange={setTabValue}>
-          <div className="border-b px-4">
-            <TabsList className="bg-transparent h-auto p-0 gap-0">
+          <div className="border-b px-4 overflow-x-auto">
+            <TabsList className="bg-transparent h-auto p-0 gap-0 min-w-max">
               {tabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 gap-2 text-sm font-semibold"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 gap-2 text-sm font-semibold whitespace-nowrap"
                 >
                   {tab.icon}
                   {tab.label}

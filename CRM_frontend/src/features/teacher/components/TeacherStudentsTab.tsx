@@ -43,7 +43,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { studentAPI, gradeAPI, attendanceAPI, testAPI } from '../../../shared/api/api';
+import { studentAPI, gradeAPI, attendanceAPI, testAPI, classAPI } from '../../../shared/api/api';
 import { useNavigate } from 'react-router-dom';
 
 interface Student {
@@ -117,10 +117,24 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
   const loadStudents = async () => {
     try {
       setLoading(true);
-      const response = await studentAPI.getAll();
-      const allStudents = response.data || [];
-      setStudents(allStudents);
-      setFilteredStudents(allStudents);
+      const [studentsRes, classesRes] = await Promise.all([
+        studentAPI.getAll(),
+        classAPI.getAll().catch(() => ({ data: [] })),
+      ]);
+      const allStudents = Array.isArray(studentsRes.data) ? studentsRes.data : [];
+      const classIds = new Set(
+        (Array.isArray(classesRes.data) ? classesRes.data : [])
+          .map((cls: any) => Number(cls.class_id || cls.id))
+          .filter(Boolean)
+      );
+      const ownStudents = teacherId
+        ? allStudents.filter((student: Student) => (
+            Number(student.teacher_id) === Number(teacherId) ||
+            classIds.has(Number(student.class_id))
+          ))
+        : allStudents;
+      setStudents(ownStudents);
+      setFilteredStudents(ownStudents);
     } catch (error) {
       console.error('Error loading students:', error);
     } finally {
@@ -193,13 +207,13 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Search Bar */}
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
+      <div className="flex justify-between items-center flex-wrap gap-3">
         <h3 className="text-lg font-semibold">
           My Students ({filteredStudents.length})
         </h3>
-        <div className="relative min-w-[350px]">
+        <div className="relative w-full sm:w-80 sm:min-w-[20rem]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search students by name, email, or enrollment..."
@@ -216,7 +230,7 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
           <p className="text-muted-foreground">No students found</p>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
@@ -344,7 +358,7 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
         </div>
       )}
 
-      <div className="mt-3">
+      <div>
         <p className="text-sm text-muted-foreground">
           Showing {filteredStudents.length} of {students.length} students
         </p>
@@ -397,7 +411,7 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
 
               {/* Tabs */}
               <Tabs value={detailsTab} onValueChange={setDetailsTab}>
-                <TabsList className="w-full justify-start">
+                <TabsList className="w-full justify-start overflow-x-auto">
                   <TabsTrigger value="overview" className="gap-1.5">
                     <TrendingUp className="h-4 w-4" /> Overview
                   </TabsTrigger>

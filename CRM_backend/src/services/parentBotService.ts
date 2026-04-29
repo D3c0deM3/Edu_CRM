@@ -899,14 +899,35 @@ const getAttendanceText = async (
   studentId: number,
   language: ParentLanguage
 ): Promise<string> => {
+  const qrCheckinsTable = await botDb.query(
+    "SELECT to_regclass('public.attendance_qr_checkins') AS table_name"
+  );
+  const hasQrCheckinsTable = Boolean(qrCheckinsTable.rows[0]?.table_name);
   const result = await botDb.query(
-    `
-      SELECT attendance_date, status, remarks, created_at
-      FROM attendance
-      WHERE student_id = $1
-      ORDER BY attendance_date DESC, attendance_id DESC
-      LIMIT 8
-    `,
+    hasQrCheckinsTable
+      ? `
+          SELECT
+            a.attendance_date,
+            a.status,
+            a.remarks,
+            COALESCE(qc.checked_in_at, a.updated_at, a.created_at) AS marked_at
+          FROM attendance a
+          LEFT JOIN attendance_qr_checkins qc ON qc.attendance_id = a.attendance_id
+          WHERE a.student_id = $1
+          ORDER BY a.attendance_date DESC, marked_at DESC, a.attendance_id DESC
+          LIMIT 8
+        `
+      : `
+          SELECT
+            a.attendance_date,
+            a.status,
+            a.remarks,
+            COALESCE(a.updated_at, a.created_at) AS marked_at
+          FROM attendance a
+          WHERE a.student_id = $1
+          ORDER BY a.attendance_date DESC, marked_at DESC, a.attendance_id DESC
+          LIMIT 8
+        `,
     [studentId]
   );
 
@@ -917,8 +938,12 @@ const getAttendanceText = async (
   const text = getTextSet(language);
   const lines: string[] = [text.recentAttendance];
   result.rows.forEach((record: any) => {
+    const date = formatTashkentDate(record.attendance_date, language);
+    const markedAt = record.marked_at
+      ? ` - ${text.markedAt}: ${formatTashkentDateTime(record.marked_at, language)}`
+      : '';
     lines.push(
-      `${record.attendance_date}: ${translateAttendanceStatus(record.status, language)}${record.remarks ? ` (${record.remarks})` : ''}`
+      `${date}: ${translateAttendanceStatus(record.status, language)}${markedAt}${record.remarks ? ` (${record.remarks})` : ''}`
     );
   });
 

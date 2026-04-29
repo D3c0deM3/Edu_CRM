@@ -19,13 +19,21 @@ exports.getAllStudents = async (req: any, res: any) => {
     if (!center_id) {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
     }
+    const filters = ['s.center_id = $1'];
+    const values: any[] = [center_id];
+
+    if (req.user?.userType === 'teacher') {
+      values.push(req.user.id);
+      filters.push(`(s.teacher_id = $${values.length} OR c.teacher_id = $${values.length})`);
+    }
+
     const result = await student_db.query(`
       SELECT s.*, c.class_name 
       FROM students s 
       LEFT JOIN classes c ON s.class_id = c.class_id 
-      WHERE s.center_id = $1
+      WHERE ${filters.join(' AND ')}
       ORDER BY s.student_id
-    `, [center_id]);
+    `, values);
     res.json(result.rows.map(sanitizeStudentForResponse));
   } catch (error: any) {
     console.error('Database error:', error);
@@ -37,12 +45,25 @@ exports.getStudentById = async (req: any, res: any) => {
   try {
     await ensureParentBotSchema();
     const { id } = req.params;
+    const center_id = req.user?.center_id;
+    if (!center_id) {
+      return res.status(401).json({ error: 'Session invalid. Please log in again.' });
+    }
+
+    const filters = ['s.student_id = $1', 's.center_id = $2'];
+    const values: any[] = [id, center_id];
+
+    if (req.user?.userType === 'teacher') {
+      values.push(req.user.id);
+      filters.push(`(s.teacher_id = $${values.length} OR c.teacher_id = $${values.length})`);
+    }
+
     const result = await student_db.query(`
       SELECT s.*, c.class_name 
       FROM students s 
       LEFT JOIN classes c ON s.class_id = c.class_id 
-      WHERE s.student_id = $1
-    `, [id]);
+      WHERE ${filters.join(' AND ')}
+    `, values);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
@@ -122,7 +143,12 @@ exports.updateStudent = async (req: any, res: any) => {
     } = req.body;
 
     const existing = await student_db.query(
-      'SELECT student_id, center_id, teacher_id FROM students WHERE student_id = $1',
+      `
+        SELECT s.student_id, s.center_id, s.teacher_id, c.teacher_id AS class_teacher_id
+        FROM students s
+        LEFT JOIN classes c ON c.class_id = s.class_id
+        WHERE s.student_id = $1
+      `,
       [id]
     );
 
@@ -134,8 +160,26 @@ exports.updateStudent = async (req: any, res: any) => {
       return res.status(403).json({ error: 'You can only update students in your own center.' });
     }
 
-    if (req.user?.userType === 'teacher' && Number(existing.rows[0].teacher_id) !== Number(req.user.id)) {
+    if (
+      req.user?.userType === 'teacher' &&
+      Number(existing.rows[0].teacher_id) !== Number(req.user.id) &&
+      Number(existing.rows[0].class_teacher_id) !== Number(req.user.id)
+    ) {
       return res.status(403).json({ error: 'You can only update your own students.' });
+    }
+
+    if (req.user?.userType === 'teacher' && class_id) {
+      const targetClass = await student_db.query(
+        'SELECT teacher_id FROM classes WHERE class_id = $1 AND center_id = $2',
+        [class_id, req.user.center_id]
+      );
+
+      if (
+        targetClass.rows.length === 0 ||
+        Number(targetClass.rows[0].teacher_id) !== Number(req.user.id)
+      ) {
+        return res.status(403).json({ error: 'You can only move students into your own classes.' });
+      }
     }
 
     if (username) {

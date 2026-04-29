@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 import { showToast, handleApiError } from '../../utils/toast';
 
 const configuredApiOrigin = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
@@ -14,6 +14,14 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+type QuietRequestConfig = AxiosRequestConfig & {
+  silentErrorToast?: boolean;
+  silentSuccessToast?: boolean;
+};
+
+const isQuietRequest = (config: any, key: 'silentErrorToast' | 'silentSuccessToast') =>
+  Boolean(config?.[key]);
 
 const desktopAdminClient = axios.create({
   baseURL: API_BASE_URL,
@@ -43,7 +51,11 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => {
     // Show success toast for POST, PUT, DELETE requests
-    if (response.config.method && ['post', 'put', 'delete'].includes(response.config.method)) {
+    if (
+      response.config.method &&
+      ['post', 'put', 'delete'].includes(response.config.method) &&
+      !isQuietRequest(response.config, 'silentSuccessToast')
+    ) {
       const message = response.data?.message || 'Operation successful!';
       showToast.success(message);
     }
@@ -70,12 +82,16 @@ apiClient.interceptors.response.use(
     // Handle 403 (forbidden) - insufficient permissions
     if (error.response?.status === 403) {
       const errorMessage = error.response?.data?.error || 'Access denied. Insufficient permissions.';
-      showToast.error(errorMessage);
+      if (!isQuietRequest(error.config, 'silentErrorToast')) {
+        showToast.error(errorMessage);
+      }
       return Promise.reject(error);
     }
 
     const errorMessage = handleApiError(error);
-    showToast.error(errorMessage);
+    if (!isQuietRequest(error.config, 'silentErrorToast')) {
+      showToast.error(errorMessage);
+    }
     return Promise.reject(error);
   }
 );
@@ -135,9 +151,10 @@ export const attendanceAPI = {
   delete: (id: number) => apiClient.delete(`/attendance/${id}`),
   createQrSession: (data: any) => apiClient.post('/attendance/qr-sessions', data),
   getQrSessions: (params?: Record<string, any>) => apiClient.get('/attendance/qr-sessions', { params }),
-  getQrSession: (sessionToken: string) => apiClient.get(`/attendance/qr-sessions/${sessionToken}`),
-  checkInQrSession: (sessionToken: string, data: any) =>
-    apiClient.post(`/attendance/qr-sessions/${sessionToken}/check-in`, data),
+  getQrSession: (sessionToken: string, config?: QuietRequestConfig) =>
+    apiClient.get(`/attendance/qr-sessions/${sessionToken}`, config),
+  checkInQrSession: (sessionToken: string, data: any, config?: QuietRequestConfig) =>
+    apiClient.post(`/attendance/qr-sessions/${sessionToken}/check-in`, data, config),
   closeQrSession: (sessionToken: string) => apiClient.post(`/attendance/qr-sessions/${sessionToken}/close`),
 };
 
