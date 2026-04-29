@@ -52,6 +52,7 @@ interface Student {
   last_name: string;
   enrollment_number: string;
   class_id?: number;
+  created_at?: string;
 }
 
 interface AttendanceRecord {
@@ -110,6 +111,23 @@ const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Half Day'] as const;
 const todayIso = () => new Date().toISOString().split('T')[0];
 const DEFAULT_QR_EXPIRY_MINUTES = 10;
 const DEFAULT_QR_RADIUS_METERS = 75;
+const quietQrRequest = {
+  silentErrorToast: true,
+  silentSuccessToast: true,
+};
+
+const dateOnly = (value?: string | null) => {
+  if (!value) {
+    return '';
+  }
+
+  return String(value).split('T')[0];
+};
+
+const wasRegisteredByDate = (student: Student, attendanceDate: string) => {
+  const registeredDate = dateOnly(student.created_at);
+  return !registeredDate || registeredDate <= attendanceDate;
+};
 
 const getLessonExpiryMinutes = (classInfo?: ClassInfo, attendanceDate?: string) => {
   if (!classInfo?.section || !attendanceDate) {
@@ -288,8 +306,15 @@ const TeacherAttendanceTab = ({
     }
 
     loadClassStudentsAndAttendance();
-    loadActiveQrSession();
-  }, [selectedClass, attendanceDate]);
+    if (showQrSection) {
+      loadActiveQrSession();
+    } else {
+      setQrSession(null);
+      setQrSessionDetails(null);
+      setQrImageUrl(null);
+      setQrError(null);
+    }
+  }, [selectedClass, attendanceDate, showQrSection]);
 
   useEffect(() => {
     if (!qrCheckInUrl) {
@@ -370,7 +395,9 @@ const TeacherAttendanceTab = ({
 
       const allStudents = Array.isArray(studentsResponse.data) ? studentsResponse.data : [];
       const classStudents = allStudents.filter(
-        (student: Student) => Number(student.class_id) === Number(selectedClass)
+        (student: Student) =>
+          Number(student.class_id) === Number(selectedClass) &&
+          wasRegisteredByDate(student, attendanceDate)
       );
       const classAttendance = Array.isArray(attendanceResponse.data) ? attendanceResponse.data : [];
       const attendanceForDate = classAttendance.filter(
@@ -406,7 +433,7 @@ const TeacherAttendanceTab = ({
   };
 
   const loadActiveQrSession = async () => {
-    if (!selectedClass) {
+    if (!selectedClass || !showQrSection) {
       return;
     }
 
@@ -417,7 +444,7 @@ const TeacherAttendanceTab = ({
         class_id: selectedClass,
         attendance_date: attendanceDate,
         active_only: false,
-      });
+      }, quietQrRequest);
       const sessions = Array.isArray(response.data) ? response.data : [];
       const latestSession = sessions.length > 0 ? hydrateQrSession(sessions[0]) : null;
       setQrSession(latestSession);
@@ -440,7 +467,7 @@ const TeacherAttendanceTab = ({
       if (showBusy) {
         setQrBusy(true);
       }
-      const response = await attendanceAPI.getQrSession(sessionToken);
+      const response = await attendanceAPI.getQrSession(sessionToken, quietQrRequest);
       const payload = response.data;
       if (payload?.session) {
         const hydratedSession = hydrateQrSession(payload.session);

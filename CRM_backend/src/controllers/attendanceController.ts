@@ -17,6 +17,14 @@ let qrSchemaInitPromise: Promise<void> | null = null;
 const isValidIsoDate = (value: any): boolean =>
   typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
+const toDateOnly = (value: any): string => {
+  if (!value) {
+    return '';
+  }
+
+  return String(value).split('T')[0];
+};
+
 const toNullableNumber = (value: any): number | null => {
   if (value === undefined || value === null || value === '') {
     return null;
@@ -273,6 +281,7 @@ const finalizeQrAttendanceSession = async (client: any, session: any) => {
        AND a.class_id = $1
        AND a.attendance_date = $3
       WHERE s.class_id = $1
+        AND s.created_at::date <= $3::date
         AND qc.qr_checkin_id IS NULL
         AND a.attendance_id IS NULL
     `,
@@ -423,6 +432,7 @@ const validateAttendanceScope = async (
     student_id: number;
     teacher_id: number;
     class_id: number;
+    attendance_date: string;
   }
 ) => {
   const classResult = await client.query(
@@ -453,7 +463,7 @@ const validateAttendanceScope = async (
 
   const studentResult = await client.query(
     `
-      SELECT student_id, center_id, class_id
+      SELECT student_id, center_id, class_id, created_at
       FROM students
       WHERE student_id = $1
     `,
@@ -471,6 +481,15 @@ const validateAttendanceScope = async (
 
   if (Number(student.class_id) !== Number(record.class_id)) {
     return { valid: false, status: 400, error: 'Student is not enrolled in this class.' };
+  }
+
+  const registeredDate = toDateOnly(student.created_at);
+  if (registeredDate && registeredDate > record.attendance_date) {
+    return {
+      valid: false,
+      status: 400,
+      error: 'Attendance cannot be saved before the student registration date.',
+    };
   }
 
   return { valid: true, classRecord };
@@ -523,6 +542,7 @@ exports.getAllAttendance = async (req: any, res: any) => {
         JOIN students s ON a.student_id = s.student_id
         JOIN teachers t ON a.teacher_id = t.teacher_id
         WHERE ${filters.join(' AND ')}
+          AND a.attendance_date >= s.created_at::date
         ORDER BY a.attendance_date DESC, a.attendance_id DESC
       `,
       values
@@ -605,6 +625,7 @@ exports.createAttendance = async (req: any, res: any) => {
       student_id: Number(student_id),
       teacher_id: Number(resolvedTeacherId),
       class_id: Number(class_id),
+      attendance_date,
     });
 
     if (!scope.valid) {
@@ -696,7 +717,7 @@ exports.getAttendanceByStudent = async (req: any, res: any) => {
 
     const studentAccess = await db.query(
       `
-        SELECT s.student_id, s.center_id, s.class_id, c.teacher_id
+        SELECT s.student_id, s.center_id, s.class_id, s.created_at, c.teacher_id
         FROM students s
         LEFT JOIN classes c ON c.class_id = s.class_id
         WHERE s.student_id = $1
@@ -729,9 +750,10 @@ exports.getAttendanceByStudent = async (req: any, res: any) => {
         LEFT JOIN classes c ON a.class_id = c.class_id
         LEFT JOIN teachers t ON a.teacher_id = t.teacher_id
         WHERE a.student_id = $1
+          AND ($2::date IS NULL OR a.attendance_date >= $2::date)
         ORDER BY a.attendance_date DESC, a.attendance_id DESC
       `,
-      [parsedStudentId]
+      [parsedStudentId, toDateOnly(student.created_at) || null]
     );
 
     res.json(result.rows);
@@ -785,6 +807,7 @@ exports.getAttendanceByClass = async (req: any, res: any) => {
         LEFT JOIN students s ON a.student_id = s.student_id
         LEFT JOIN classes c ON a.class_id = c.class_id
         WHERE a.class_id = $1
+          AND a.attendance_date >= s.created_at::date
         ORDER BY a.attendance_date DESC, a.attendance_id DESC
       `,
       [parsedClassId]
@@ -869,6 +892,7 @@ exports.createBulkAttendance = async (req: any, res: any) => {
         student_id: Number(student_id),
         teacher_id: Number(resolvedTeacherId),
         class_id: Number(class_id),
+        attendance_date,
       });
 
       if (!scope.valid) {
@@ -1057,10 +1081,23 @@ exports.getQrAttendanceSessions = async (req: any, res: any) => {
       return res.status(401).json({ error: 'Session invalid. Please log in again.' });
     }
 
-    await finalizeExpiredQrAttendanceSessions(
-      Number(centerId),
-      req.user?.userType === 'teacher' ? Number(req.user.id) : null
-    );
+    const attendanceDate =
+      typeof req.query.attendance_date === 'string' ? req.query.attendance_date : '';
+
+    if (attendanceDate && !isValidIsoDate(attendanceDate)) {
+      return res.status(400).json({ error: 'attendance_date must be in YYYY-MM-DD format' });
+    }
+
+    const activeOnly =
+      req.query.active_only === 'true' ||
+      (!attendanceDate && req.query.active_only !== 'false');
+
+    if (activeOnly) {
+      await finalizeExpiredQrAttendanceSessions(
+        Number(centerId),
+        req.user?.userType === 'teacher' ? Number(req.user.id) : null
+      );
+    }
 
     const filters: string[] = ['s.center_id = $1'];
     const values: any[] = [centerId];
@@ -1075,21 +1112,10 @@ exports.getQrAttendanceSessions = async (req: any, res: any) => {
       filters.push(`s.class_id = $${values.length}`);
     }
 
-    const attendanceDate =
-      typeof req.query.attendance_date === 'string' ? req.query.attendance_date : '';
-
     if (attendanceDate) {
-      if (!isValidIsoDate(attendanceDate)) {
-        return res.status(400).json({ error: 'attendance_date must be in YYYY-MM-DD format' });
-      }
-
       values.push(attendanceDate);
       filters.push(`s.attendance_date = $${values.length}`);
     }
-
-    const activeOnly =
-      req.query.active_only === 'true' ||
-      (!attendanceDate && req.query.active_only !== 'false');
 
     if (activeOnly) {
       filters.push('s.is_active = TRUE');
@@ -1149,7 +1175,11 @@ exports.getQrAttendanceSession = async (req: any, res: any) => {
     }
 
     if (session.is_active && new Date(session.expires_at).getTime() <= Date.now() && !session.finalized_at) {
-      await finalizeExpiredQrAttendanceSessions(Number(session.center_id), null);
+      try {
+        await finalizeExpiredQrAttendanceSessions(Number(session.center_id), null);
+      } catch (finalizeError) {
+        console.error('Failed to finalize expired QR session while fetching details:', finalizeError);
+      }
     }
 
     const active = Boolean(session.active);
@@ -1175,6 +1205,19 @@ exports.getQrAttendanceSession = async (req: any, res: any) => {
     };
 
     if (isStudent) {
+      const studentAccess = await db.query(
+        `
+          SELECT created_at
+          FROM students
+          WHERE student_id = $1 AND class_id = $2
+        `,
+        [req.user.id, session.class_id]
+      );
+      const studentRegisteredDate = toDateOnly(studentAccess.rows[0]?.created_at);
+      const studentEligible =
+        Number(req.user.class_id) === Number(session.class_id) &&
+        (!studentRegisteredDate || studentRegisteredDate <= toDateOnly(session.attendance_date));
+
       const existingCheckIn = await db.query(
         `
           SELECT checked_in_at, distance_meters, location_validated
@@ -1186,7 +1229,7 @@ exports.getQrAttendanceSession = async (req: any, res: any) => {
 
       return res.json({
         session: sessionData,
-        eligible: Number(req.user.class_id) === Number(session.class_id),
+        eligible: studentEligible,
         already_checked_in: existingCheckIn.rows.length > 0,
         check_in: existingCheckIn.rows[0] || null,
       });
@@ -1212,6 +1255,7 @@ exports.getQrAttendanceSession = async (req: any, res: any) => {
           ON qc.student_id = s.student_id
          AND qc.session_id = $1
         WHERE s.class_id = $2
+          AND s.created_at::date <= $3::date
         ORDER BY s.first_name, s.last_name, s.student_id
       `,
       [session.session_id, session.class_id, session.attendance_date]
@@ -1308,6 +1352,21 @@ exports.checkInWithQrAttendanceSession = async (req: any, res: any) => {
 
     if (Number(req.user?.class_id) !== Number(session.class_id)) {
       return res.status(403).json({ error: 'This QR code is not for your class.' });
+    }
+
+    const studentAccess = await db.query(
+      `
+        SELECT created_at
+        FROM students
+        WHERE student_id = $1 AND class_id = $2
+      `,
+      [req.user.id, session.class_id]
+    );
+    const registeredDate = toDateOnly(studentAccess.rows[0]?.created_at);
+    if (registeredDate && registeredDate > toDateOnly(session.attendance_date)) {
+      return res.status(403).json({
+        error: 'This attendance date is before your registration date.',
+      });
     }
 
     const priorCheckIn = await db.query(

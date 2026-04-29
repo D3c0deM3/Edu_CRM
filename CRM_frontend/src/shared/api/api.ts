@@ -150,7 +150,8 @@ export const attendanceAPI = {
   update: (id: number, data: any) => apiClient.put(`/attendance/${id}`, data),
   delete: (id: number) => apiClient.delete(`/attendance/${id}`),
   createQrSession: (data: any) => apiClient.post('/attendance/qr-sessions', data),
-  getQrSessions: (params?: Record<string, any>) => apiClient.get('/attendance/qr-sessions', { params }),
+  getQrSessions: (params?: Record<string, any>, config?: QuietRequestConfig) =>
+    apiClient.get('/attendance/qr-sessions', { ...config, params }),
   getQrSession: (sessionToken: string, config?: QuietRequestConfig) =>
     apiClient.get(`/attendance/qr-sessions/${sessionToken}`, config),
   checkInQrSession: (sessionToken: string, data: any, config?: QuietRequestConfig) =>

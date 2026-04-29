@@ -112,21 +112,21 @@ const AttendancePage = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-2">
             <button
               type="button"
               onClick={() => scrollToTeacherPanel('qr')}
-              className="text-left"
+              className="min-w-0 text-left"
             >
               <Card
                 className={cn(
-                  'h-full border-2 bg-card/90 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+                  'h-full min-h-[126px] border-2 bg-card/90 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
                   teacherMode === 'qr'
                     ? 'border-indigo-500 ring-4 ring-indigo-500/10'
                     : 'border-border/80'
                 )}
               >
-                <CardContent className="flex items-start gap-4 p-5">
+                <CardContent className="flex h-full items-center gap-4 p-5 sm:p-6">
                   <div
                     className={cn(
                       'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
@@ -137,10 +137,10 @@ const AttendancePage = () => {
                   >
                     <QrCode className="h-6 w-6" />
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-base font-semibold text-foreground">QR Attendance</h3>
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                         Fast check-in
                       </span>
                     </div>
@@ -156,17 +156,17 @@ const AttendancePage = () => {
             <button
               type="button"
               onClick={() => scrollToTeacherPanel('manual')}
-              className="text-left"
+              className="min-w-0 text-left"
             >
               <Card
                 className={cn(
-                  'h-full border-2 bg-card/90 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
+                  'h-full min-h-[126px] border-2 bg-card/90 text-card-foreground shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md',
                   teacherMode === 'manual'
                     ? 'border-emerald-500 ring-4 ring-emerald-500/10'
                     : 'border-border/80'
                 )}
               >
-                <CardContent className="flex items-start gap-4 p-5">
+                <CardContent className="flex h-full items-center gap-4 p-5 sm:p-6">
                   <div
                     className={cn(
                       'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
@@ -177,10 +177,10 @@ const AttendancePage = () => {
                   >
                     <ClipboardCheck className="h-6 w-6" />
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-base font-semibold text-foreground">Manual Attendance</h3>
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                         Full control
                       </span>
                     </div>
