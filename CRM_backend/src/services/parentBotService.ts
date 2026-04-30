@@ -107,6 +107,33 @@ const addMonthsClamped = (date: Date, monthsToAdd: number): Date => {
   return new Date(Date.UTC(year, month, day));
 };
 
+const getPaymentPeriodDays = (frequency: unknown): number => {
+  const normalized = String(frequency || '').toLowerCase();
+
+  if (normalized.includes('quarter')) {
+    return 90;
+  }
+
+  if (normalized.includes('annual') || normalized.includes('year')) {
+    return 365;
+  }
+
+  return 30;
+};
+
+const calculateNextPaymentDueDate = (
+  registrationDate: string | Date,
+  latestPaymentDate: string | Date | null,
+  paymentFrequency: unknown
+): string => {
+  const periodDays = getPaymentPeriodDays(paymentFrequency);
+  const baseDate = latestPaymentDate
+    ? toUtcDate(latestPaymentDate)
+    : toUtcDate(registrationDate);
+
+  return formatDate(addDays(baseDate, periodDays));
+};
+
 const hashParentPassword = (password: string) =>
   crypto.createHash('sha256').update(password).digest('hex');
 
@@ -843,6 +870,16 @@ const getStudentPaymentSnapshot = async (studentId: number) => {
     nextDueBalance = nextUnpaidCycle?.balance || 0;
   }
 
+  const latestPayment = paymentsResult.rows[paymentsResult.rows.length - 1];
+  if (latestPayment && monthlyFee > 0) {
+    nextDueDate = calculateNextPaymentDueDate(
+      student.created_at,
+      latestPayment.payment_date,
+      student.payment_frequency
+    );
+    nextDueBalance = monthlyFee;
+  }
+
   return {
     student,
     totalPaid,
@@ -1318,7 +1355,7 @@ export const notifyParentsAboutGrade = async (
   }
 };
 
-export const runParentPaymentReminderSweep = async () => {
+export const runParentPaymentReminderSweep = async (options: { centerId?: number; studentIds?: number[] } = {}) => {
   if (!TELEGRAM_BOT_TOKEN) {
     return;
   }
@@ -1327,6 +1364,25 @@ export const runParentPaymentReminderSweep = async () => {
     await ensureParentBotSchema();
 
     const today = toUtcDate(new Date());
+    const values: any[] = [];
+    const filters = [
+      "s.status = 'Active'",
+      's.parent_telegram_chat_id IS NOT NULL',
+      's.parent_password_hash IS NOT NULL',
+      'c.payment_frequency IS NOT NULL',
+      'COALESCE(c.payment_amount, 0) > 0',
+    ];
+
+    if (options.centerId) {
+      values.push(options.centerId);
+      filters.push(`s.center_id = $${values.length}`);
+    }
+
+    if (options.studentIds?.length) {
+      values.push(options.studentIds);
+      filters.push(`s.student_id = ANY($${values.length}::int[])`);
+    }
+
     const studentsResult = await botDb.query(
       `
         SELECT
@@ -1348,18 +1404,15 @@ export const runParentPaymentReminderSweep = async () => {
         FROM students s
         JOIN edu_centers ec ON ec.center_id = s.center_id
         LEFT JOIN classes c ON c.class_id = s.class_id
-        WHERE s.status = 'Active'
-          AND s.parent_telegram_chat_id IS NOT NULL
-          AND s.parent_password_hash IS NOT NULL
-          AND c.payment_frequency = 'Monthly'
-          AND COALESCE(c.payment_amount, 0) > 0
-      `
+        WHERE ${filters.join(' AND ')}
+      `,
+      values
     );
 
     for (const student of studentsResult.rows) {
       const paymentsResult = await botDb.query(
         `
-          SELECT amount, payment_date
+          SELECT payment_id, amount, payment_date
           FROM payments
           WHERE student_id = $1
             AND payment_status = 'Completed'
@@ -1369,28 +1422,19 @@ export const runParentPaymentReminderSweep = async () => {
       );
 
       const warningDays = Number.isFinite(Number(student.parent_payment_warning_days))
-        ? Number(student.parent_payment_warning_days)
+        ? Math.max(0, Number(student.parent_payment_warning_days))
         : DEFAULT_PARENT_PAYMENT_WARNING_DAYS;
-      const monthlyFee = roundMoney(toNumber(student.payment_amount));
-      const totalPaid = roundMoney(
-        paymentsResult.rows.reduce((sum: number, payment: any) => sum + toNumber(payment.amount), 0)
+      const amountDue = roundMoney(toNumber(student.payment_amount));
+      const latestPayment = paymentsResult.rows[paymentsResult.rows.length - 1];
+      const dueDateValue = calculateNextPaymentDueDate(
+        student.created_at,
+        latestPayment?.payment_date || null,
+        student.payment_frequency
       );
-      const futureWindow = addMonthsClamped(today, 2);
-      const cycles = applyPaymentCredit(
-        buildDueCycles(toUtcDate(student.created_at), futureWindow, monthlyFee),
-        totalPaid
-      );
+      const dueDate = toUtcDate(dueDateValue);
+      const reminderDate = addDays(dueDate, -warningDays);
 
-      const dueCycle = cycles.find((cycle) => {
-        if (cycle.balance <= MONEY_EPSILON) {
-          return false;
-        }
-        const reminderDate = addDays(toUtcDate(cycle.dueDate), -warningDays);
-        const dueDate = toUtcDate(cycle.dueDate);
-        return reminderDate <= today && today <= dueDate;
-      });
-
-      if (!dueCycle) {
+      if (amountDue <= MONEY_EPSILON || reminderDate > today || today > dueDate) {
         continue;
       }
 
@@ -1399,20 +1443,23 @@ export const runParentPaymentReminderSweep = async () => {
       await sendParentNotification(
         student.student_id,
         'payment_reminder',
-        `payment-reminder:${student.student_id}:${dueCycle.dueDate}`,
+        `payment-reminder:${student.student_id}:${dueDateValue}`,
         [
           interpolate(text.paymentReminder, {
             name: `${student.first_name} ${student.last_name}`,
           }),
           `${text.class}: ${student.class_name || text.noClassAssigned}`,
-          `${text.dueDate}: ${formatTashkentDate(dueCycle.dueDate, language)}`,
-          `${text.amountDue}: ${formatMoney(dueCycle.balance)}`,
+          `${text.dueDate}: ${formatTashkentDate(dueDateValue, language)}`,
+          `${text.amountDue}: ${formatMoney(amountDue)}`,
           interpolate(text.reminderInfo, { days: warningDays }),
         ].join('\n'),
         language,
         {
-          due_date: dueCycle.dueDate,
-          balance: dueCycle.balance,
+          due_date: dueDateValue,
+          balance: amountDue,
+          latest_payment_id: latestPayment?.payment_id || null,
+          latest_payment_date: latestPayment?.payment_date || null,
+          payment_frequency: student.payment_frequency,
         }
       );
     }

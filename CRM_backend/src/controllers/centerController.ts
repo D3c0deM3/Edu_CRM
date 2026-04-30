@@ -1,4 +1,5 @@
 const dc_db = require('../../config/dbcon');
+const { runParentPaymentReminderSweep } = require('../services/parentBotService');
 
 let centerReminderColumnReady: Promise<void> | null = null;
 
@@ -43,6 +44,7 @@ exports.getCenterById = async (req: any, res: any) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Center not found' });
     }
+
     res.json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -116,6 +118,11 @@ exports.updateCenter = async (req: any, res: any) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Center not found' });
     }
+
+    if (parent_payment_warning_days !== undefined) {
+      await runParentPaymentReminderSweep({ centerId: Number(result.rows[0].center_id) });
+    }
+
     res.json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);

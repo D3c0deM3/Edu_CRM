@@ -1,5 +1,6 @@
 const payment_db = require('../../config/dbcon');
 const { syncAutoDebtsForCenter } = require('../services/autoDebtService');
+const { runParentPaymentReminderSweep } = require('../services/parentBotService');
 
 exports.getAllPayments = async (req: any, res: any) => {
   try {
@@ -38,6 +39,10 @@ exports.createPayment = async (req: any, res: any) => {
       [student_id, center_id, payment_date, amount, currency || 'UZS', payment_method || 'Cash', transaction_reference, receipt_number, payment_status || 'Completed', payment_type, notes]
     );
     await syncAutoDebtsForCenter(result.rows[0].center_id, [result.rows[0].student_id]);
+    await runParentPaymentReminderSweep({
+      centerId: Number(result.rows[0].center_id),
+      studentIds: [Number(result.rows[0].student_id)],
+    });
     res.status(201).json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);
@@ -57,6 +62,10 @@ exports.updatePayment = async (req: any, res: any) => {
       return res.status(404).json({ error: 'Payment not found' });
     }
     await syncAutoDebtsForCenter(result.rows[0].center_id, [result.rows[0].student_id]);
+    await runParentPaymentReminderSweep({
+      centerId: Number(result.rows[0].center_id),
+      studentIds: [Number(result.rows[0].student_id)],
+    });
     res.json(result.rows[0]);
   } catch (error: any) {
     console.error('Database error:', error);
