@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { teacherAPI, classAPI, studentAPI, gradeAPI, subjectAPI, assignmentAPI } from '../../../shared/api/api';
-import { AssignmentSectionTeacher } from './components/AssignmentSectionTeacher';
+import { teacherAPI, classAPI, studentAPI, gradeAPI, subjectAPI } from '../../../shared/api/api';
 import { showToast } from '../../../utils/toast';
 import {
   ArrowLeft,
@@ -14,7 +13,6 @@ import {
   ChevronDown,
   User,
   BookOpen,
-  ClipboardList,
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -84,16 +82,6 @@ interface Student {
   status: string;
 }
 
-interface Assignment {
-  assignment_id?: number;
-  id?: number;
-  class_id?: number;
-  assignment_title: string;
-  due_date: string;
-  status: string;
-  grade?: number;
-}
-
 interface GradeEntry {
   student_id: number;
   percentage: number;
@@ -107,7 +95,6 @@ const TeacherDetailPage = () => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
@@ -133,18 +120,16 @@ const TeacherDetailPage = () => {
       const teacherData = teacherResponse.data || teacherResponse;
       setTeacher(teacherData);
 
-      // Fetch all classes, students, subjects and assignments
-      const [classesRes, studentsRes, subjectsRes, assignmentRes] = await Promise.all([
+      // Fetch all classes, students, and subjects
+      const [classesRes, studentsRes, subjectsRes] = await Promise.all([
         classAPI.getAll(),
         studentAPI.getAll(),
         subjectAPI.getAll(),
-        assignmentAPI.getAll(),
       ]);
 
       const classesData = classesRes.data || classesRes;
       const studentsData = studentsRes.data || studentsRes;
       const subjectsData = subjectsRes.data || subjectsRes;
-      const assignmentData = assignmentRes.data || assignmentRes;
 
       // Filter classes taught by this teacher
       const teacherIdNum = Number(teacherId);
@@ -161,11 +146,6 @@ const TeacherDetailPage = () => {
       const allSubjects = Array.isArray(subjectsData) ? subjectsData : [];
       setSubjects(allSubjects);
 
-      // Get assignments where class_id equals teacher_id
-      const teacherAssignments = Array.isArray(assignmentData)
-        ? assignmentData.filter((a: Record<string, unknown>) => Number(a.class_id) === teacherIdNum)
-        : [];
-      setAssignments(teacherAssignments);
     } catch (err) {
       console.error('Error loading teacher details:', err);
       setError('Failed to load teacher details');
@@ -386,10 +366,6 @@ const TeacherDetailPage = () => {
               <BookOpen className="h-4 w-4" />
               Classes & Students
             </TabsTrigger>
-            <TabsTrigger value="assignments" className="gap-2 text-base font-semibold data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none">
-              <ClipboardList className="h-4 w-4" />
-              Assignments
-            </TabsTrigger>
           </TabsList>
 
           <div className="p-4 sm:p-6">
@@ -544,15 +520,6 @@ const TeacherDetailPage = () => {
                   })}
                 </div>
               )}
-            </TabsContent>
-
-            {/* Tab: Assignments */}
-            <TabsContent value="assignments">
-              <AssignmentSectionTeacher
-                assignments={assignments}
-                teacherId={teacher?.teacher_id || teacher?.id}
-                onRefresh={loadTeacherDetails}
-              />
             </TabsContent>
 
           </div>

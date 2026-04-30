@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users,
-  ClipboardList,
   GraduationCap,
   CalendarDays,
   Star,
@@ -12,7 +11,6 @@ import {
   BookOpen,
   ArrowRight,
   CheckCircle2,
-  AlertTriangle,
   BarChart3,
   Activity,
 } from 'lucide-react';
@@ -33,14 +31,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useAppSelector } from '../crm/hooks';
-import { useNavigate } from 'react-router-dom';
 import TeacherStudentsTab from './components/TeacherStudentsTab';
 import TeacherClassesTab from './components/TeacherClassesTab';
 import TeacherAttendanceTab from './components/TeacherAttendanceTab';
 import TeacherGradesTab from './components/TeacherGradesTab';
-import TeacherAssignmentsTab from './components/TeacherAssignmentsTab';
 import type { RootState } from '../../store';
-import { studentAPI, classAPI, attendanceAPI, assignmentAPI, gradeAPI } from '../../shared/api/api';
+import { studentAPI, classAPI, attendanceAPI, gradeAPI } from '../../shared/api/api';
 
 /* ─── Mini pie chart (pure SVG) ─── */
 const MiniPie = ({ value, max, color, size = 52 }: { value: number; max: number; color: string; size?: number }) => {
@@ -79,13 +75,11 @@ interface TeacherStats {
   todayAttendance: number;
   totalAttendanceToday: number;
   presentToday: number;
-  pendingAssignments: number;
   upcomingClasses: number;
 }
 
 const TeacherPortal = () => {
   const { user } = useAppSelector((state: RootState) => state.auth);
-  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState('students');
   const [stats, setStats] = useState<TeacherStats>({
     totalStudents: 0,
@@ -93,7 +87,6 @@ const TeacherPortal = () => {
     todayAttendance: 0,
     totalAttendanceToday: 0,
     presentToday: 0,
-    pendingAssignments: 0,
     upcomingClasses: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -104,18 +97,16 @@ const TeacherPortal = () => {
     try {
       setLoading(true);
 
-      const [studentsRes, classesRes, attendanceRes, assignmentsRes, gradesRes] = await Promise.all([
+      const [studentsRes, classesRes, attendanceRes, gradesRes] = await Promise.all([
         studentAPI.getAll().catch(() => ({ data: [] })),
         classAPI.getAll().catch(() => ({ data: [] })),
         attendanceAPI.getAll().catch(() => ({ data: [] })),
-        assignmentAPI.getAll().catch(() => ({ data: [] })),
         gradeAPI.getAll().catch(() => ({ data: [] })),
       ]);
 
       const students = studentsRes.data || [];
       const classList = classesRes.data || [];
       const attendance = attendanceRes.data || [];
-      const assignments = assignmentsRes.data || [];
       const gradeList = gradesRes.data || [];
       const teacherId = Number(user?.id);
       const myClassIds = new Set(
@@ -135,9 +126,6 @@ const TeacherPortal = () => {
         myClassIds.has(Number(record.class_id)) ||
         myStudentIds.has(Number(record.student_id))
       ));
-      const myAssignments = (Array.isArray(assignments) ? assignments : []).filter((assignment: any) => (
-        !teacherId || myClassIds.has(Number(assignment.class_id))
-      ));
       const myGrades = (Array.isArray(gradeList) ? gradeList : []).filter((grade: any) => (
         !teacherId ||
         Number(grade.teacher_id) === teacherId ||
@@ -152,15 +140,12 @@ const TeacherPortal = () => {
       const todayAtt = myAttendance.filter((a: any) => a.attendance_date?.split('T')[0] === today);
       const presentToday = todayAtt.filter((a: any) => a.status === 'Present' || a.status === 'present').length;
 
-      const pendingAssignments = myAssignments.filter((a: any) => a.status === 'Pending' || a.status === 'Active').length;
-
       setStats({
         totalStudents: myStudents.length,
         totalClasses: classList.length,
         todayAttendance: todayAtt.length,
         totalAttendanceToday: todayAtt.length,
         presentToday,
-        pendingAssignments,
         upcomingClasses: classList.filter((c: any) => c.status === 'Active').length,
       });
     } catch (error) {
@@ -218,7 +203,6 @@ const TeacherPortal = () => {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'attendance': setTabValue('attendance'); break;
-      case 'assignment': navigate('/assignments'); break;
       case 'grade': setTabValue('grades'); break;
       default: break;
     }
@@ -228,7 +212,6 @@ const TeacherPortal = () => {
     { title: 'My Students', value: stats.totalStudents, icon: <Users className="h-5 w-5" />, color: '#6366f1', bg: '#6366f115', tab: 'students' },
     { title: 'My Classes', value: stats.totalClasses, icon: <BookOpen className="h-5 w-5" />, color: '#8b5cf6', bg: '#8b5cf615', tab: 'classes' },
     { title: 'Attendance Today', value: `${stats.presentToday}/${stats.totalAttendanceToday}`, icon: <CalendarDays className="h-5 w-5" />, color: '#10b981', bg: '#10b98115', tab: 'attendance' },
-    { title: 'Assignments', value: stats.pendingAssignments, icon: <ClipboardList className="h-5 w-5" />, color: '#06b6d4', bg: '#06b6d415', tab: 'assignments', alert: stats.pendingAssignments > 0 },
   ];
 
   const tabs = [
@@ -236,7 +219,6 @@ const TeacherPortal = () => {
     { value: 'classes', label: 'My Classes', icon: <GraduationCap className="h-4 w-4" /> },
     { value: 'attendance', label: 'Attendance', icon: <CalendarDays className="h-4 w-4" /> },
     { value: 'grades', label: 'Grades', icon: <Star className="h-4 w-4" /> },
-    { value: 'assignments', label: 'Assignments', icon: <ClipboardList className="h-4 w-4" /> },
   ];
 
   if (loading) {
@@ -312,7 +294,7 @@ const TeacherPortal = () => {
       </div>
 
       {/* ──── Stat Cards Row ──── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {statsCards.map((stat, index) => (
           <Card
             key={index}
@@ -325,12 +307,6 @@ const TeacherPortal = () => {
                 <div className="min-w-0">
                   <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide truncate">{stat.title}</p>
                   <p className="text-xl font-bold mt-0.5">{stat.value}</p>
-                  {stat.alert && (
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <AlertTriangle className="h-3 w-3 text-amber-500" />
-                      <span className="text-[10px] text-amber-600 font-medium">Needs attention</span>
-                    </div>
-                  )}
                 </div>
                 <div className="p-2 rounded-xl shrink-0" style={{ backgroundColor: stat.bg, color: stat.color }}>
                   {stat.icon}
@@ -408,15 +384,6 @@ const TeacherPortal = () => {
                 </div>
                 <Badge className="bg-amber-500/10 text-amber-600 border-none text-xs">{gradeTotal}</Badge>
               </div>
-              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => setTabValue('assignments')}>
-                <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                  <ClipboardList className="h-3.5 w-3.5 text-cyan-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Pending Assignments</p>
-                </div>
-                <Badge className="bg-cyan-500/10 text-cyan-600 border-none text-xs">{stats.pendingAssignments}</Badge>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -464,10 +431,6 @@ const TeacherPortal = () => {
                   className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-xs font-medium text-muted-foreground hover:text-foreground group">
                   <CalendarDays className="h-3.5 w-3.5 text-emerald-500 group-hover:scale-110 transition-transform" /> Attendance
                 </button>
-                <button onClick={() => handleQuickAction('assignment')}
-                  className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-xs font-medium text-muted-foreground hover:text-foreground group">
-                  <ClipboardList className="h-3.5 w-3.5 text-cyan-500 group-hover:scale-110 transition-transform" /> Assignment
-                </button>
               </div>
             </div>
           </CardContent>
@@ -505,9 +468,6 @@ const TeacherPortal = () => {
             <TabsContent value="grades">
               <TeacherGradesTab teacherId={user?.id} onRefresh={loadStats} />
             </TabsContent>
-            <TabsContent value="assignments">
-              <TeacherAssignmentsTab teacherId={user?.id} onRefresh={loadStats} />
-            </TabsContent>
           </CardContent>
         </Tabs>
       </Card>
@@ -525,9 +485,6 @@ const TeacherPortal = () => {
         <DropdownMenuContent side="top" align="end" className="w-48">
           <DropdownMenuItem onClick={() => handleQuickAction('attendance')}>
             <CalendarDays className="h-4 w-4 mr-2" /> Take Attendance
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleQuickAction('assignment')}>
-            <ClipboardList className="h-4 w-4 mr-2" /> Create Assignment
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleQuickAction('grade')}>
             <Star className="h-4 w-4 mr-2" /> Enter Grades

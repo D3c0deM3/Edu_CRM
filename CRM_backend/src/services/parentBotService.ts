@@ -1386,7 +1386,8 @@ export const runParentPaymentReminderSweep = async () => {
           return false;
         }
         const reminderDate = addDays(toUtcDate(cycle.dueDate), -warningDays);
-        return formatDate(reminderDate) === formatDate(today);
+        const dueDate = toUtcDate(cycle.dueDate);
+        return reminderDate <= today && today <= dueDate;
       });
 
       if (!dueCycle) {

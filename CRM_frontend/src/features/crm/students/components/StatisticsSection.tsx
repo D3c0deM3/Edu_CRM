@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, DollarSign, CheckCircle, Star } from 'lucide-react';
+import { Calendar, DollarSign, Star } from 'lucide-react';
 import { formatCurrency } from '../../../../utils/helpers';
 
 interface StatisticsSectionProps {
@@ -14,11 +14,6 @@ interface StatisticsSectionProps {
     completed: number;
     pending: number;
     totalAmount: number;
-  };
-  assignmentStats: {
-    total: number;
-    submitted: number;
-    pending: number;
   };
   gradeAverage: string;
 }
@@ -35,11 +30,6 @@ const statCards = [
     color: 'text-green-600 bg-green-100',
   },
   {
-    key: 'assignments',
-    icon: CheckCircle,
-    color: 'text-purple-600 bg-purple-100',
-  },
-  {
     key: 'grades',
     icon: Star,
     color: 'text-yellow-600 bg-yellow-100',
@@ -49,7 +39,6 @@ const statCards = [
 export const StatisticsSection = ({
   attendanceStats,
   paymentStats,
-  assignmentStats,
   gradeAverage,
 }: StatisticsSectionProps) => {
   const data = [
@@ -64,11 +53,6 @@ export const StatisticsSection = ({
       sub: `${paymentStats.completed} completed`,
     },
     {
-      label: 'Assignments',
-      value: `${assignmentStats.submitted}/${assignmentStats.total}`,
-      sub: 'Submitted',
-    },
-    {
       label: 'Average Grade',
       value: `${gradeAverage}%`,
       sub: 'Overall',
@@ -76,7 +60,7 @@ export const StatisticsSection = ({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {data.map((item, index) => {
         const config = statCards[index];
         const Icon = config.icon;

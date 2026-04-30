@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, Trash2, X, ArrowLeft, Search, Filter, User, BookOpen, Plus, CreditCard, Users, Loader2, ChevronLeft, ChevronRight, Zap, SlidersHorizontal } from 'lucide-react';
+import { Pencil, Trash2, X, ArrowLeft, Search, Filter, User, BookOpen, Plus, CreditCard, Users, Loader2, ChevronLeft, ChevronRight, Zap, SlidersHorizontal, Bell, Save } from 'lucide-react';
 import { useCRUD } from '../hooks/useCRUD';
-import { paymentAPI, teacherAPI, classAPI, studentAPI } from '../../../shared/api/api';
+import { paymentAPI, teacherAPI, classAPI, studentAPI, centerAPI } from '../../../shared/api/api';
 import { SelectField } from '../students/components/SelectField';
 import { fetchStudents, paymentMethodOptions, paymentStatusOptions, paymentTypeOptions } from '../../../utils/dropdownOptions';
 import { Button } from '@/components/ui/button';
@@ -136,6 +136,9 @@ const PaymentsPage = () => {
 
   // Quick pay student selector (for class/teacher folder views)
   const [quickStudentId, setQuickStudentId] = useState<number | ''>('');
+  const [reminderDays, setReminderDays] = useState(3);
+  const [reminderSaving, setReminderSaving] = useState(false);
+  const [reminderLoading, setReminderLoading] = useState(false);
 
   useEffect(() => {
     actions.fetchAll();
@@ -160,6 +163,45 @@ const PaymentsPage = () => {
       console.error('Error loading data:', error);
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const loadReminderSettings = async () => {
+    if (!user?.center_id) {
+      return;
+    }
+
+    setReminderLoading(true);
+    try {
+      const response = await centerAPI.getById(user.center_id);
+      const center = response.data || response;
+      setReminderDays(Number(center.parent_payment_warning_days ?? 3));
+    } catch (error) {
+      console.error('Error loading payment reminder settings:', error);
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReminderSettings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.center_id]);
+
+  const saveReminderSettings = async () => {
+    if (!user?.center_id) {
+      return;
+    }
+
+    setReminderSaving(true);
+    try {
+      await centerAPI.update(user.center_id, {
+        parent_payment_warning_days: Math.max(0, Number(reminderDays) || 0),
+      });
+    } catch (error) {
+      console.error('Error saving payment reminder settings:', error);
+    } finally {
+      setReminderSaving(false);
     }
   };
 
@@ -380,6 +422,38 @@ const PaymentsPage = () => {
       </div>
 
       {state.error && <Alert className="mb-4"><AlertDescription>{state.error}</AlertDescription></Alert>}
+
+      <Card className="mb-6 border-amber-200 bg-amber-50/60">
+        <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+              <Bell className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold">Parent payment bot reminders</h2>
+              <p className="text-sm text-muted-foreground">
+                Telegram reminders are sent this many days before each monthly payment date.
+              </p>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center md:w-auto">
+            <Label htmlFor="payment-reminder-days" className="sr-only">Reminder days</Label>
+            <Input
+              id="payment-reminder-days"
+              type="number"
+              min={0}
+              className="w-full sm:w-28"
+              disabled={reminderLoading}
+              value={reminderDays}
+              onChange={(event) => setReminderDays(Number(event.target.value))}
+            />
+            <Button onClick={saveReminderSettings} disabled={reminderSaving || reminderLoading} className="w-full sm:w-auto">
+              {reminderSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {!selectedFolder ? (
         <>

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { studentAPI, attendanceAPI, paymentAPI, assignmentAPI, gradeAPI, classAPI } from '../../../shared/api/api';
+import { studentAPI, attendanceAPI, paymentAPI, gradeAPI, classAPI } from '../../../shared/api/api';
 import { StudentInfoSection } from './components/StudentInfoSection';
 import { StatisticsSection } from './components/StatisticsSection';
-import { AttendanceTab, PaymentsTab, AssignmentsTab, IndividualTasksTab, GradesTab } from './tabs';
+import { AttendanceTab, PaymentsTab, GradesTab } from './tabs';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -53,15 +53,6 @@ interface Payment {
   receipt_number: string;
 }
 
-interface Assignment {
-  assignment_id?: number;
-  id?: number;
-  assignment_title: string;
-  due_date: string;
-  status: string;
-  grade?: number;
-}
-
 interface Grade {
   grade_id?: number;
   id?: number;
@@ -80,7 +71,6 @@ const StudentDetailPage = () => {
   const [classData, setClassData] = useState<Class | null>(null);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,20 +99,17 @@ const StudentDetailPage = () => {
         }
       }
 
-      const [attendanceRes, paymentRes, assignmentRes, gradeRes] = await Promise.all([
+      const [attendanceRes, paymentRes, gradeRes] = await Promise.all([
         attendanceAPI.getAll(),
         isSuperuser ? paymentAPI.getAll() : Promise.resolve({ data: [] }),
-        assignmentAPI.getAll(),
         gradeAPI.getAll(),
       ]);
 
       const attendanceData = attendanceRes.data || attendanceRes;
       const paymentData = paymentRes.data || paymentRes;
-      const assignmentData = assignmentRes.data || assignmentRes;
       const gradeData = gradeRes.data || gradeRes;
 
       const studentIdNum = Number(studentId);
-      const studentClassId = Number(studentData.class_id);
 
       setAttendance(
         Array.isArray(attendanceData)
@@ -132,11 +119,6 @@ const StudentDetailPage = () => {
       setPayments(
         Array.isArray(paymentData)
           ? paymentData.filter((p: Record<string, unknown>) => p.student_id === studentIdNum)
-          : []
-      );
-      setAssignments(
-        Array.isArray(assignmentData)
-          ? assignmentData.filter((a: Record<string, unknown>) => Number(a.class_id) === studentClassId || studentId)
           : []
       );
       setGrades(
@@ -182,12 +164,6 @@ const StudentDetailPage = () => {
     totalAmount: payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
   };
 
-  const assignmentStats = {
-    total: assignments.length,
-    submitted: assignments.filter((a) => a.status === 'Submitted').length,
-    pending: assignments.filter((a) => a.status === 'Pending').length,
-  };
-
   const gradeAverage =
     grades.length > 0
       ? (grades.reduce((sum, g) => sum + (Number(g.percentage) || 0), 0) / grades.length).toFixed(2)
@@ -216,7 +192,6 @@ const StudentDetailPage = () => {
       <StatisticsSection
         attendanceStats={attendanceStats}
         paymentStats={paymentStats}
-        assignmentStats={assignmentStats}
         gradeAverage={gradeAverage}
       />
 
@@ -225,8 +200,6 @@ const StudentDetailPage = () => {
         <TabsList className="bg-muted">
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="individual-tasks">Individual Tasks</TabsTrigger>
           <TabsTrigger value="grades">Grades</TabsTrigger>
         </TabsList>
       </Tabs>
@@ -238,23 +211,6 @@ const StudentDetailPage = () => {
 
       {activeTab === 'payments' && (
         <PaymentsTab payments={payments} student={student} classData={classData} onRefresh={loadStudentDetails} />
-      )}
-
-      {activeTab === 'assignments' && (
-        <AssignmentsTab
-          assignments={assignments}
-          studentClassId={student.class_id}
-          studentId={student.student_id || student.id}
-          onRefresh={loadStudentDetails}
-        />
-      )}
-
-      {activeTab === 'individual-tasks' && (
-        <IndividualTasksTab
-          assignments={assignments}
-          studentId={student.student_id || student.id}
-          onRefresh={loadStudentDetails}
-        />
       )}
 
       {activeTab === 'grades' && (

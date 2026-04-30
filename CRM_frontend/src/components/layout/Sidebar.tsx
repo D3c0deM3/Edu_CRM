@@ -2,7 +2,7 @@ import { useState, useEffect, memo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, CreditCard, BarChart3,
-  ClipboardList, CheckCircle, Building2, AlertTriangle, HandCoins,
+  ClipboardList, Building2, AlertTriangle, HandCoins,
   LogOut, Sun, Moon, Menu, X, User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,6 @@ const iconMap: Record<string, React.ElementType> = {
   MdPayment: CreditCard,
   MdBarChart: BarChart3,
   MdAssignment: ClipboardList,
-  MdChecklist: CheckCircle,
   MdBusiness: Building2,
   MdWarning: AlertTriangle,
   MdSalary: HandCoins,
@@ -61,7 +60,6 @@ const Sidebar = memo(() => {
     { label: 'Teacher Salaries', path: '/teacher-salaries', iconName: 'MdSalary', roles: ['superuser'] },
     { label: 'Grades', path: '/grades', iconName: 'MdBarChart', roles: ['superuser', 'teacher'] },
     { label: 'Attendance', path: '/attendance', iconName: 'MdAssignment', roles: ['superuser', 'teacher'] },
-    { label: 'Assignments', path: '/assignments', iconName: 'MdChecklist', roles: ['superuser', 'teacher'] },
     { label: 'Subjects', path: '/subjects', iconName: 'MdBook', roles: ['superuser', 'teacher'] },
     { label: 'Debts', path: '/debts', iconName: 'MdWarning', roles: ['superuser'] },
     { label: 'Centers', path: '/centers', iconName: 'MdBusiness', roles: ['superuser'] },

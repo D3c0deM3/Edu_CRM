@@ -6,7 +6,6 @@ import {
   BookOpen,
   CalendarDays,
   DollarSign,
-  ClipboardList,
   TrendingUp,
   ArrowRight,
   Loader2,
@@ -36,7 +35,6 @@ import {
   gradeAPI,
   attendanceAPI,
   paymentAPI,
-  assignmentAPI,
   debtAPI,
   centerAPI,
 } from '../../../shared/api/api';
@@ -103,28 +101,26 @@ const Dashboard = memo(() => {
   const [grades, setGrades] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
   const [debts, setDebts] = useState<any[]>([]);
   const [centers, setCenters] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [sRes, tRes, cRes, gRes, aRes, pRes, asRes, dRes, cenRes] = await Promise.all([
+      const [sRes, tRes, cRes, gRes, aRes, pRes, dRes, cenRes] = await Promise.all([
         studentAPI.getAll().catch(() => ({ data: [] })),
         teacherAPI.getAll().catch(() => ({ data: [] })),
         classAPI.getAll().catch(() => ({ data: [] })),
         gradeAPI.getAll().catch(() => ({ data: [] })),
         attendanceAPI.getAll().catch(() => ({ data: [] })),
         paymentAPI.getAll().catch(() => ({ data: [] })),
-        assignmentAPI.getAll().catch(() => ({ data: [] })),
         debtAPI.getAll().catch(() => ({ data: [] })),
         centerAPI.getAll().catch(() => ({ data: [] })),
       ]);
       const arr = (d: any) => (Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : []);
       setStudents(arr(sRes)); setTeachers(arr(tRes)); setClasses(arr(cRes));
       setGrades(arr(gRes)); setAttendance(arr(aRes)); setPayments(arr(pRes));
-      setAssignments(arr(asRes)); setDebts(arr(dRes));
+      setDebts(arr(dRes));
       setCenters(arr(cenRes));
     } catch (e) {
       console.error('Dashboard data error:', e);
@@ -176,9 +172,6 @@ const Dashboard = memo(() => {
   const outstandingDebts = useMemo(() => debts.filter((d: any) => d.status !== 'Paid' && d.status !== 'paid'), [debts]);
   const totalDebtAmount = useMemo(() => outstandingDebts.reduce((s: number, d: any) => s + (Number(d.amount) || 0), 0), [outstandingDebts]);
   const collectionRate = totalRevenue + totalDebtAmount > 0 ? (totalRevenue / (totalRevenue + totalDebtAmount)) * 100 : 100;
-
-  // Assignments
-  const pendingAssignments = useMemo(() => assignments.filter((a: any) => a.status === 'Pending' || a.status === 'Active').length, [assignments]);
 
   // Top classes
   const classPerformance = useMemo(() => {
@@ -401,7 +394,6 @@ const Dashboard = memo(() => {
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Requires Action</p>
               {[
                 { label: 'Outstanding Debts', count: outstandingDebts.length, icon: <AlertTriangle className="h-3.5 w-3.5" />, color: '#ef4444', path: '/debts' },
-                { label: 'Pending Assignments', count: pendingAssignments, icon: <ClipboardList className="h-3.5 w-3.5" />, color: '#06b6d4', path: '/assignments' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(item.path)}>
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${item.color}15`, color: item.color }}>
