@@ -17,6 +17,7 @@ interface Student {
   status: string;
   class_id?: number;
   center_id?: number;
+  created_at?: string;
 }
 
 interface StudentInfoSectionProps {
@@ -37,6 +38,12 @@ const getStatusVariant = (status: string) => {
 };
 
 export const StudentInfoSection = ({ student }: StudentInfoSectionProps) => {
+  const formatDate = (value?: string) => {
+    if (!value) return 'Not set';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Not set' : date.toLocaleDateString();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -58,7 +65,11 @@ export const StudentInfoSection = ({ student }: StudentInfoSectionProps) => {
           </div>
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground">Date of Birth</p>
-            <p className="text-sm font-semibold">{new Date(student.date_of_birth).toLocaleDateString()}</p>
+            <p className="text-sm font-semibold">{formatDate(student.date_of_birth)}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Registered Date</p>
+            <p className="text-sm font-semibold">{formatDate(student.created_at)}</p>
           </div>
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground">Gender</p>

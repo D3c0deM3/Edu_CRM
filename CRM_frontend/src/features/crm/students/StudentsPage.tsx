@@ -53,6 +53,7 @@ interface Student {
   username?: string;
   password?: string;
   parent_password?: string;
+  created_at?: string;
 }
 
 interface Class {
@@ -93,6 +94,12 @@ const StudentsPage = () => {
   const toDateInputValue = (value?: string) => {
     if (!value) return '';
     return value.includes('T') ? value.split('T')[0] : value;
+  };
+
+  const formatDate = (value?: string) => {
+    if (!value) return 'Not set';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Not set' : date.toLocaleDateString();
   };
 
   useEffect(() => {
@@ -479,6 +486,7 @@ const StudentsPage = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>Registered</TableHead>
                   <TableHead>Date of Birth</TableHead>
                   <TableHead>Gender</TableHead>
                   <TableHead>Status</TableHead>
@@ -488,13 +496,13 @@ const StudentsPage = () => {
               <TableBody>
                 {state.loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={9} className="text-center py-12">
                       <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
                     </TableCell>
                   </TableRow>
                 ) : displayedStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       {hasActiveFilters
                         ? 'No students match your search criteria'
                         : 'No students found in this class'}
@@ -509,8 +517,9 @@ const StudentsPage = () => {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{student.email}</TableCell>
                       <TableCell className="text-muted-foreground">{student.phone}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(student.created_at)}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(student.date_of_birth).toLocaleDateString()}
+                        {formatDate(student.date_of_birth)}
                       </TableCell>
                       <TableCell>{student.gender}</TableCell>
                       <TableCell>
