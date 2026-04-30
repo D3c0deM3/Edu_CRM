@@ -18,7 +18,6 @@ const attendanceRoutes = require('./routes/attendanceRoutes');
 const assignmentRoutes = require('./routes/assignmentRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 const superuserRoutes = require('./routes/superuserRoutes');
-const testRoutes = require('./routes/testRoutes');
 const teacherSalaryRoutes = require('./routes/teacherSalaryRoutes');
 const desktopAuthRoutes = require('./routes/desktopAuthRoutes');
 const { startParentTelegramBot } = require('./services/parentBotService');
@@ -111,9 +110,6 @@ app.use('/api/subjects', requireAuth, requireActiveCenterSubscription, requireRo
 
 // Superusers: superuser only for management
 app.use('/api/superusers', requireAuth, requireActiveCenterSubscription, requireRole('superuser'), superuserRoutes);
-
-// Tests: authenticated users (role checks are more granular inside routes)
-app.use('/api/tests', requireAuth, requireActiveCenterSubscription, testRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: any, res: any, next: any): void => {

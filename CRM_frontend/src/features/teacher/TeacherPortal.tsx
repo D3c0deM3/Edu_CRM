@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Users,
   ClipboardList,
-  FileQuestion,
   GraduationCap,
   CalendarDays,
   Star,
@@ -36,13 +35,12 @@ import {
 import { useAppSelector } from '../crm/hooks';
 import { useNavigate } from 'react-router-dom';
 import TeacherStudentsTab from './components/TeacherStudentsTab';
-import TeacherTestsTab from './components/TeacherTestsTab';
 import TeacherClassesTab from './components/TeacherClassesTab';
 import TeacherAttendanceTab from './components/TeacherAttendanceTab';
 import TeacherGradesTab from './components/TeacherGradesTab';
 import TeacherAssignmentsTab from './components/TeacherAssignmentsTab';
 import type { RootState } from '../../store';
-import { testAPI, studentAPI, classAPI, attendanceAPI, assignmentAPI, gradeAPI } from '../../shared/api/api';
+import { studentAPI, classAPI, attendanceAPI, assignmentAPI, gradeAPI } from '../../shared/api/api';
 
 /* ─── Mini pie chart (pure SVG) ─── */
 const MiniPie = ({ value, max, color, size = 52 }: { value: number; max: number; color: string; size?: number }) => {
@@ -78,9 +76,6 @@ const GradeBar = ({ label, count, total, color }: { label: string; count: number
 interface TeacherStats {
   totalStudents: number;
   totalClasses: number;
-  pendingTests: number;
-  completedTests: number;
-  pendingGrading: number;
   todayAttendance: number;
   totalAttendanceToday: number;
   presentToday: number;
@@ -95,9 +90,6 @@ const TeacherPortal = () => {
   const [stats, setStats] = useState<TeacherStats>({
     totalStudents: 0,
     totalClasses: 0,
-    pendingTests: 0,
-    completedTests: 0,
-    pendingGrading: 0,
     todayAttendance: 0,
     totalAttendanceToday: 0,
     presentToday: 0,
@@ -112,8 +104,7 @@ const TeacherPortal = () => {
     try {
       setLoading(true);
 
-      const [testsRes, studentsRes, classesRes, attendanceRes, assignmentsRes, gradesRes] = await Promise.all([
-        testAPI.getAll().catch(() => ({ data: [] })),
+      const [studentsRes, classesRes, attendanceRes, assignmentsRes, gradesRes] = await Promise.all([
         studentAPI.getAll().catch(() => ({ data: [] })),
         classAPI.getAll().catch(() => ({ data: [] })),
         attendanceAPI.getAll().catch(() => ({ data: [] })),
@@ -121,7 +112,6 @@ const TeacherPortal = () => {
         gradeAPI.getAll().catch(() => ({ data: [] })),
       ]);
 
-      const tests = testsRes.data || [];
       const students = studentsRes.data || [];
       const classList = classesRes.data || [];
       const attendance = attendanceRes.data || [];
@@ -162,17 +152,11 @@ const TeacherPortal = () => {
       const todayAtt = myAttendance.filter((a: any) => a.attendance_date?.split('T')[0] === today);
       const presentToday = todayAtt.filter((a: any) => a.status === 'Present' || a.status === 'present').length;
 
-      const pendingTests = tests.filter((t: any) => t.is_active).length;
-      const completedTests = tests.length - pendingTests;
-      const pendingGrading = tests.filter((t: any) => (t.submission_count || 0) > 0).length;
       const pendingAssignments = myAssignments.filter((a: any) => a.status === 'Pending' || a.status === 'Active').length;
 
       setStats({
         totalStudents: myStudents.length,
         totalClasses: classList.length,
-        pendingTests,
-        completedTests,
-        pendingGrading,
         todayAttendance: todayAtt.length,
         totalAttendanceToday: todayAtt.length,
         presentToday,
@@ -233,7 +217,6 @@ const TeacherPortal = () => {
 
   const handleQuickAction = (action: string) => {
     switch (action) {
-      case 'test': navigate('/tests/create'); break;
       case 'attendance': setTabValue('attendance'); break;
       case 'assignment': navigate('/assignments'); break;
       case 'grade': setTabValue('grades'); break;
@@ -244,15 +227,12 @@ const TeacherPortal = () => {
   const statsCards = [
     { title: 'My Students', value: stats.totalStudents, icon: <Users className="h-5 w-5" />, color: '#6366f1', bg: '#6366f115', tab: 'students' },
     { title: 'My Classes', value: stats.totalClasses, icon: <BookOpen className="h-5 w-5" />, color: '#8b5cf6', bg: '#8b5cf615', tab: 'classes' },
-    { title: 'Active Tests', value: stats.pendingTests, icon: <FileQuestion className="h-5 w-5" />, color: '#ef4444', bg: '#ef444415', tab: 'tests' },
-    { title: 'Pending Grading', value: stats.pendingGrading, icon: <Star className="h-5 w-5" />, color: '#f59e0b', bg: '#f59e0b15', tab: 'grades', alert: stats.pendingGrading > 0 },
     { title: 'Attendance Today', value: `${stats.presentToday}/${stats.totalAttendanceToday}`, icon: <CalendarDays className="h-5 w-5" />, color: '#10b981', bg: '#10b98115', tab: 'attendance' },
     { title: 'Assignments', value: stats.pendingAssignments, icon: <ClipboardList className="h-5 w-5" />, color: '#06b6d4', bg: '#06b6d415', tab: 'assignments', alert: stats.pendingAssignments > 0 },
   ];
 
   const tabs = [
     { value: 'students', label: 'My Students', icon: <Users className="h-4 w-4" /> },
-    { value: 'tests', label: 'My Tests', icon: <FileQuestion className="h-4 w-4" /> },
     { value: 'classes', label: 'My Classes', icon: <GraduationCap className="h-4 w-4" /> },
     { value: 'attendance', label: 'Attendance', icon: <CalendarDays className="h-4 w-4" /> },
     { value: 'grades', label: 'Grades', icon: <Star className="h-4 w-4" /> },
@@ -424,9 +404,9 @@ const TeacherPortal = () => {
                   <Star className="h-3.5 w-3.5 text-amber-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Pending Grading</p>
+                  <p className="text-sm font-medium">Grade Entry</p>
                 </div>
-                <Badge className="bg-amber-500/10 text-amber-600 border-none text-xs">{stats.pendingGrading}</Badge>
+                <Badge className="bg-amber-500/10 text-amber-600 border-none text-xs">{gradeTotal}</Badge>
               </div>
               <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => setTabValue('assignments')}>
                 <div className="w-7 h-7 rounded-lg bg-cyan-500/10 flex items-center justify-center">
@@ -436,15 +416,6 @@ const TeacherPortal = () => {
                   <p className="text-sm font-medium">Pending Assignments</p>
                 </div>
                 <Badge className="bg-cyan-500/10 text-cyan-600 border-none text-xs">{stats.pendingAssignments}</Badge>
-              </div>
-              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => setTabValue('tests')}>
-                <div className="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center">
-                  <FileQuestion className="h-3.5 w-3.5 text-red-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Active Tests</p>
-                </div>
-                <Badge className="bg-red-500/10 text-red-600 border-none text-xs">{stats.pendingTests}</Badge>
               </div>
             </div>
           </CardContent>
@@ -493,10 +464,6 @@ const TeacherPortal = () => {
                   className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-xs font-medium text-muted-foreground hover:text-foreground group">
                   <CalendarDays className="h-3.5 w-3.5 text-emerald-500 group-hover:scale-110 transition-transform" /> Attendance
                 </button>
-                <button onClick={() => handleQuickAction('test')}
-                  className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-xs font-medium text-muted-foreground hover:text-foreground group">
-                  <FileQuestion className="h-3.5 w-3.5 text-red-500 group-hover:scale-110 transition-transform" /> Create Test
-                </button>
                 <button onClick={() => handleQuickAction('assignment')}
                   className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 transition-all text-xs font-medium text-muted-foreground hover:text-foreground group">
                   <ClipboardList className="h-3.5 w-3.5 text-cyan-500 group-hover:scale-110 transition-transform" /> Assignment
@@ -529,9 +496,6 @@ const TeacherPortal = () => {
             <TabsContent value="students">
               <TeacherStudentsTab teacherId={user?.id} onRefresh={loadStats} />
             </TabsContent>
-            <TabsContent value="tests">
-              <TeacherTestsTab teacherId={user?.id} onRefresh={loadStats} />
-            </TabsContent>
             <TabsContent value="classes">
               <TeacherClassesTab teacherId={user?.id} onRefresh={loadStats} />
             </TabsContent>
@@ -559,9 +523,6 @@ const TeacherPortal = () => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="end" className="w-48">
-          <DropdownMenuItem onClick={() => handleQuickAction('test')}>
-            <FileQuestion className="h-4 w-4 mr-2" /> Create Test
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleQuickAction('attendance')}>
             <CalendarDays className="h-4 w-4 mr-2" /> Take Attendance
           </DropdownMenuItem>

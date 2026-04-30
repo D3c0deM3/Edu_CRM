@@ -59,7 +59,6 @@ export const ROUTE_PERMISSIONS = {
   '/users': PERMISSION_CODES.MANAGE_USERS,
   '/teacher-portal': null, // Teacher specific route
   '/student-portal': null, // Student specific route
-  '/my-tests': 'VIEW_OWN_ASSIGNMENTS',
 };
 
 // Helper functions

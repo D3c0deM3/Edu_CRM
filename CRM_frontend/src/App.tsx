@@ -30,14 +30,6 @@ const DebtsPage = lazy(() => import('./features/crm/debts/DebtsPage'));
 const TeacherSalariesPage = lazy(() => import('./features/crm/teacher-salaries/TeacherSalariesPage'));
 const AssignmentsPage = lazy(() => import('./features/crm/assignments/AssignmentsPage'));
 const SubjectsPage = lazy(() => import('./features/crm/subjects/SubjectsPage'));
-const TestsPage = lazy(() => import('./features/crm/tests/TestsPage'));
-const CreateTestPage = lazy(() => import('./features/crm/tests/CreateTestPage'));
-const TestDetailPage = lazy(() => import('./features/crm/tests/TestDetailPage'));
-const TakeTestPage = lazy(() => import('./features/crm/tests/TakeTestPage'));
-const StudentTestsPage = lazy(() => import('./features/crm/tests/StudentTestsPage'));
-const TestAssignPage = lazy(() => import('./features/crm/tests/TestAssignPage'));
-const GradeSubmissionPage = lazy(() => import('./features/crm/tests/GradeSubmissionPage'));
-const ViewSubmissionPage = lazy(() => import('./features/crm/tests/ViewSubmissionPage'));
 const TeacherPortal = lazy(() => import('./features/teacher/TeacherPortal'));
 const StudentPortal = lazy(() => import('./features/student/StudentPortal'));
 const StudentQrAttendancePage = lazy(() => import('./features/student/StudentQrAttendancePage'));
@@ -316,124 +308,6 @@ function AppContent() {
             <Layout>
               <Suspense fallback={<LoadingSpinner />}>
                 <SubjectsPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Tests Routes */}
-      <Route
-        path="/my-tests"
-        element={
-          <ProtectedRoute allowedUserTypes={['student']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <StudentTestsPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/tests"
-        element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <TestsPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/tests/create"
-        element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <CreateTestPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/tests/:testId"
-        element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <TestDetailPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/tests/:testId/edit"
-        element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <CreateTestPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/tests/:testId/assign"
-        element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <TestAssignPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/tests/take/:submissionId"
-        element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher', 'student']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <TakeTestPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/tests/submissions/:submissionId/grade"
-        element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <GradeSubmissionPage />
-              </Suspense>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/tests/submissions/:submissionId"
-        element={
-          <ProtectedRoute allowedUserTypes={['superuser', 'teacher']}>
-            <Layout>
-              <Suspense fallback={<LoadingSpinner />}>
-                <ViewSubmissionPage />
               </Suspense>
             </Layout>
           </ProtectedRoute>

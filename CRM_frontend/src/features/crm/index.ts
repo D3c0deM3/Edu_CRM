@@ -17,5 +17,4 @@ export { default as AssignmentsPage } from './assignments/AssignmentsPage';
 export { default as SubjectsPage } from './subjects/SubjectsPage';
 export { default as CentersPage } from './centers/CentersPage';
 export { default as DebtsPage } from './debts/DebtsPage';
-export { default as TestsPage } from './tests/TestsPage';
 export { default as Dashboard } from './dashboard/Dashboard';

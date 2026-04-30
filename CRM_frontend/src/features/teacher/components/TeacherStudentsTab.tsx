@@ -7,7 +7,6 @@ import {
   MoreVertical,
   Star,
   CalendarDays,
-  FileQuestion,
   TrendingUp,
   Loader2,
 } from 'lucide-react';
@@ -43,7 +42,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { studentAPI, gradeAPI, attendanceAPI, testAPI, classAPI } from '../../../shared/api/api';
+import { studentAPI, gradeAPI, attendanceAPI, classAPI } from '../../../shared/api/api';
 import { useNavigate } from 'react-router-dom';
 
 interface Student {
@@ -69,7 +68,6 @@ interface Student {
 interface StudentDetails {
   grades: any[];
   attendance: any[];
-  testResults: any[];
   assignments: any[];
 }
 
@@ -90,7 +88,6 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
   const [studentDetails, setStudentDetails] = useState<StudentDetails>({
     grades: [],
     attendance: [],
-    testResults: [],
     assignments: [],
   });
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -145,16 +142,14 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
   const loadStudentDetails = async (student: Student) => {
     try {
       setDetailsLoading(true);
-      const [gradesRes, attendanceRes, testsRes] = await Promise.all([
+      const [gradesRes, attendanceRes] = await Promise.all([
         gradeAPI.getByStudent(student.student_id).catch(() => ({ data: [] })),
         attendanceAPI.getByStudent(student.student_id).catch(() => ({ data: [] })),
-        testAPI.getStudentResults(student.student_id).catch(() => ({ data: [] })),
       ]);
 
       setStudentDetails({
         grades: gradesRes.data || [],
         attendance: attendanceRes.data || [],
-        testResults: testsRes.data || [],
         assignments: [],
       });
     } catch (error) {
@@ -344,10 +339,6 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
                           <CalendarDays className="h-4 w-4 mr-2" />
                           View Attendance
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleViewDetails(student, 'tests')}>
-                          <FileQuestion className="h-4 w-4 mr-2" />
-                          View Test Results
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -390,7 +381,7 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
           ) : (
             <>
               {/* Quick Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                 <Card className="bg-indigo-500/10 text-center p-4">
                   <p className="text-3xl font-bold text-primary">{calculateAverageGrade()}%</p>
                   <p className="text-xs text-muted-foreground">Avg. Grade</p>
@@ -398,10 +389,6 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
                 <Card className="bg-emerald-500/10 text-center p-4">
                   <p className="text-3xl font-bold text-emerald-500">{calculateAttendancePercentage()}%</p>
                   <p className="text-xs text-muted-foreground">Attendance</p>
-                </Card>
-                <Card className="bg-rose-500/10 text-center p-4">
-                  <p className="text-3xl font-bold text-rose-500">{studentDetails.testResults.length}</p>
-                  <p className="text-xs text-muted-foreground">Tests Taken</p>
                 </Card>
                 <Card className="bg-sky-500/10 text-center p-4">
                   <p className="text-3xl font-bold text-sky-500">{studentDetails.grades.length}</p>
@@ -420,9 +407,6 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
                   </TabsTrigger>
                   <TabsTrigger value="attendance" className="gap-1.5">
                     <CalendarDays className="h-4 w-4" /> Attendance
-                  </TabsTrigger>
-                  <TabsTrigger value="tests" className="gap-1.5">
-                    <FileQuestion className="h-4 w-4" /> Test Results
                   </TabsTrigger>
                 </TabsList>
 
@@ -566,45 +550,6 @@ const TeacherStudentsTab = ({ teacherId, onRefresh: _onRefresh }: TeacherStudent
                   )}
                 </TabsContent>
 
-                {/* Test Results Tab */}
-                <TabsContent value="tests">
-                  {studentDetails.testResults.length === 0 ? (
-                    <p className="text-center py-6 text-muted-foreground">No test results</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Test</TableHead>
-                          <TableHead>Score</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {studentDetails.testResults.map((result, i) => (
-                          <TableRow key={i}>
-                            <TableCell>{result.test_name}</TableCell>
-                            <TableCell>
-                              {result.score !== null ? `${result.score}/${result.total_marks}` : '-'}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={result.status === 'graded' ? 'success' : 'warning'}
-                              >
-                                {result.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {result.submitted_at
-                                ? new Date(result.submitted_at).toLocaleDateString()
-                                : '-'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </TabsContent>
               </Tabs>
             </>
           )}

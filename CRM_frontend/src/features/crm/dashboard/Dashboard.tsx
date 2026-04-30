@@ -7,7 +7,6 @@ import {
   CalendarDays,
   DollarSign,
   ClipboardList,
-  FileQuestion,
   TrendingUp,
   ArrowRight,
   Loader2,
@@ -38,7 +37,6 @@ import {
   attendanceAPI,
   paymentAPI,
   assignmentAPI,
-  testAPI,
   debtAPI,
   centerAPI,
 } from '../../../shared/api/api';
@@ -106,14 +104,13 @@ const Dashboard = memo(() => {
   const [attendance, setAttendance] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
-  const [tests, setTests] = useState<any[]>([]);
   const [debts, setDebts] = useState<any[]>([]);
   const [centers, setCenters] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [sRes, tRes, cRes, gRes, aRes, pRes, asRes, teRes, dRes, cenRes] = await Promise.all([
+      const [sRes, tRes, cRes, gRes, aRes, pRes, asRes, dRes, cenRes] = await Promise.all([
         studentAPI.getAll().catch(() => ({ data: [] })),
         teacherAPI.getAll().catch(() => ({ data: [] })),
         classAPI.getAll().catch(() => ({ data: [] })),
@@ -121,14 +118,13 @@ const Dashboard = memo(() => {
         attendanceAPI.getAll().catch(() => ({ data: [] })),
         paymentAPI.getAll().catch(() => ({ data: [] })),
         assignmentAPI.getAll().catch(() => ({ data: [] })),
-        testAPI.getAll().catch(() => ({ data: [] })),
         debtAPI.getAll().catch(() => ({ data: [] })),
         centerAPI.getAll().catch(() => ({ data: [] })),
       ]);
       const arr = (d: any) => (Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : []);
       setStudents(arr(sRes)); setTeachers(arr(tRes)); setClasses(arr(cRes));
       setGrades(arr(gRes)); setAttendance(arr(aRes)); setPayments(arr(pRes));
-      setAssignments(arr(asRes)); setTests(arr(teRes)); setDebts(arr(dRes));
+      setAssignments(arr(asRes)); setDebts(arr(dRes));
       setCenters(arr(cenRes));
     } catch (e) {
       console.error('Dashboard data error:', e);
@@ -181,9 +177,8 @@ const Dashboard = memo(() => {
   const totalDebtAmount = useMemo(() => outstandingDebts.reduce((s: number, d: any) => s + (Number(d.amount) || 0), 0), [outstandingDebts]);
   const collectionRate = totalRevenue + totalDebtAmount > 0 ? (totalRevenue / (totalRevenue + totalDebtAmount)) * 100 : 100;
 
-  // Assignments / Tests
+  // Assignments
   const pendingAssignments = useMemo(() => assignments.filter((a: any) => a.status === 'Pending' || a.status === 'Active').length, [assignments]);
-  const activeTests = useMemo(() => tests.filter((t: any) => t.is_active).length, [tests]);
 
   // Top classes
   const classPerformance = useMemo(() => {
@@ -221,7 +216,6 @@ const Dashboard = memo(() => {
     { label: 'View Debts', icon: <AlertTriangle className="h-4 w-4" />, path: '/debts', color: '#ef4444' },
     { label: 'Grade Reports', icon: <GraduationCap className="h-4 w-4" />, path: '/grades', color: '#f59e0b' },
     { label: 'Attendance', icon: <CalendarDays className="h-4 w-4" />, path: '/attendance', color: '#14b8a6' },
-    { label: 'Tests', icon: <FileQuestion className="h-4 w-4" />, path: '/tests', color: '#e11d48' },
   ];
 
   if (loading) {
@@ -408,7 +402,6 @@ const Dashboard = memo(() => {
               {[
                 { label: 'Outstanding Debts', count: outstandingDebts.length, icon: <AlertTriangle className="h-3.5 w-3.5" />, color: '#ef4444', path: '/debts' },
                 { label: 'Pending Assignments', count: pendingAssignments, icon: <ClipboardList className="h-3.5 w-3.5" />, color: '#06b6d4', path: '/assignments' },
-                { label: 'Active Tests', count: activeTests, icon: <FileQuestion className="h-3.5 w-3.5" />, color: '#e11d48', path: '/tests' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(item.path)}>
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${item.color}15`, color: item.color }}>

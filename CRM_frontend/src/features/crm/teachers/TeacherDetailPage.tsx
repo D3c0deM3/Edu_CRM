@@ -15,7 +15,6 @@ import {
   User,
   BookOpen,
   ClipboardList,
-  FileQuestion,
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -391,10 +390,6 @@ const TeacherDetailPage = () => {
               <ClipboardList className="h-4 w-4" />
               Assignments
             </TabsTrigger>
-            <TabsTrigger value="tests" className="gap-2 text-base font-semibold data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none">
-              <FileQuestion className="h-4 w-4" />
-              Tests
-            </TabsTrigger>
           </TabsList>
 
           <div className="p-4 sm:p-6">
@@ -560,36 +555,6 @@ const TeacherDetailPage = () => {
               />
             </TabsContent>
 
-            {/* Tab: Tests */}
-            <TabsContent value="tests">
-              <div className="flex flex-col gap-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Tests Management</h3>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      className="rounded-lg"
-                      onClick={() => navigate('/tests')}
-                    >
-                      <FileQuestion className="mr-2 h-4 w-4" />
-                      View All Tests
-                    </Button>
-                    <Button
-                      className="bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-lg"
-                      onClick={() => navigate('/tests/create')}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create New Test
-                    </Button>
-                  </div>
-                </div>
-                <Alert className="rounded-lg border-blue-200 bg-blue-50 text-blue-800">
-                  <AlertDescription>
-                    Navigate to the Tests section to create, assign, and manage tests for your classes and students.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            </TabsContent>
           </div>
         </Tabs>
       </Card>

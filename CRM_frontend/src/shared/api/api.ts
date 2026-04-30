@@ -195,45 +195,6 @@ export const teacherSalaryAPI = {
   deletePayment: (id: number) => apiClient.delete(`/teacher-salaries/payments/${id}`),
 };
 
-export const testAPI = {
-  // Test CRUD
-  getAll: (params?: { center_id?: number; test_type?: string; is_active?: boolean; subject_id?: number }) =>
-    apiClient.get('/tests', { params }),
-  getById: (id: number) => apiClient.get(`/tests/${id}`),
-  create: (data: any) => apiClient.post('/tests', data),
-  update: (id: number, data: any) => apiClient.put(`/tests/${id}`, data),
-  delete: (id: number) => apiClient.delete(`/tests/${id}`),
-  
-  // Questions
-  addQuestion: (testId: number, data: any) => apiClient.post(`/tests/${testId}/questions`, data),
-  updateQuestion: (questionId: number, data: any) => apiClient.put(`/tests/questions/${questionId}`, data),
-  deleteQuestion: (questionId: number) => apiClient.delete(`/tests/questions/${questionId}`),
-  
-  // Passages
-  addPassage: (testId: number, data: any) => apiClient.post(`/tests/${testId}/passages`, data),
-  updatePassage: (passageId: number, data: any) => apiClient.put(`/tests/passages/${passageId}`, data),
-  deletePassage: (passageId: number) => apiClient.delete(`/tests/passages/${passageId}`),
-  
-  // Submissions
-  startTest: (testId: number, studentId: number, userType?: string) => 
-    apiClient.post(`/tests/${testId}/start`, { student_id: studentId, user_type: userType }),
-  submitTest: (submissionId: number, answers: any) => apiClient.post(`/tests/submissions/${submissionId}/submit`, { answers }),
-  gradeSubmission: (submissionId: number, data: any) => apiClient.post(`/tests/submissions/${submissionId}/grade`, data),
-  getSubmissionsByTest: (testId: number) => apiClient.get(`/tests/${testId}/submissions`),
-  getSubmissionsByStudent: (studentId: number) => apiClient.get(`/tests/student/${studentId}/submissions`),
-  getSubmissionDetails: (submissionId: number) => apiClient.get(`/tests/submissions/${submissionId}`),
-  
-  // Results
-  getTestResults: (testId: number) => apiClient.get(`/tests/${testId}/results`),
-  getStudentResults: (studentId: number) => apiClient.get(`/tests/student/${studentId}/results`),
-  
-  // Assignments
-  assignTest: (testId: number, assignments: any[], assignedBy: number) =>
-    apiClient.post(`/tests/${testId}/assign`, { assignments, assigned_by: assignedBy }),
-  getAssignedTests: (type: 'student' | 'teacher' | 'class', id: number, studentId?: number) =>
-    apiClient.get(`/tests/assigned/${type}/${id}${studentId ? `?student_id=${studentId}` : ''}`),
-};
-
 export const centerAPI = {
   getAll: () => apiClient.get('/centers'),
   getById: (id: number) => apiClient.get(`/centers/${id}`),

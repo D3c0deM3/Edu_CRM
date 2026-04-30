@@ -43,7 +43,7 @@ const roleConfig = {
   student: {
     icon: GraduationCap,
     title: 'Student',
-    subtitle: 'Access your tests, grades & portal',
+    subtitle: 'Access your grades, attendance & portal',
     gradient: 'from-sky-400 to-cyan-400',
     accentColor: 'text-sky-400',
     badgeBg: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
@@ -187,7 +187,7 @@ export const LoginPage = ({ userType }: LoginPageProps) => {
           </p>
 
           <div className="flex gap-2 flex-wrap justify-center">
-            {['Classes', 'Attendance', 'Grades', 'Tests', 'Payments'].map((feat) => (
+            {['Classes', 'Attendance', 'Grades', 'Payments'].map((feat) => (
               <span
                 key={feat}
                 className="px-3 py-1 text-xs font-medium rounded-full bg-white/[0.08] text-white/60 border border-white/10"
