@@ -3,6 +3,7 @@ const cryptoModule1 = require('crypto');
 const { generateToken } = require('../middleware/auth');
 const {
   ensureParentBotSchema,
+  linkExistingParentTelegramChatForStudent,
   prepareStudentParentFields,
   sanitizeStudentForResponse,
 } = require('../services/parentBotService');
@@ -141,6 +142,7 @@ exports.createStudent = async (req: any, res: any) => {
         class_id,
       ]
     );
+    await linkExistingParentTelegramChatForStudent(result.rows[0].student_id);
     res.status(201).json(sanitizeStudentForResponse(result.rows[0]));
   } catch (error: any) {
     console.error('Database error:', error);
@@ -245,6 +247,7 @@ exports.updateStudent = async (req: any, res: any) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
+    await linkExistingParentTelegramChatForStudent(result.rows[0].student_id);
     res.json(sanitizeStudentForResponse(result.rows[0]));
   } catch (error: any) {
     console.error('Database error:', error);

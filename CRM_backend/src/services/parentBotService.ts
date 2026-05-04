@@ -622,6 +622,15 @@ const loadChildrenByChatId = async (chatId: number): Promise<ParentChildRecord[]
   await ensureParentBotSchema();
   const result = await botDb.query(
     `
+      WITH linked_parent_profiles AS (
+        SELECT DISTINCT
+          regexp_replace(COALESCE(parent_phone, ''), '[^0-9]', '', 'g') AS parent_phone_digits,
+          parent_password_hash
+        FROM students
+        WHERE parent_telegram_chat_id = $1
+          AND parent_password_hash IS NOT NULL
+          AND regexp_replace(COALESCE(parent_phone, ''), '[^0-9]', '', 'g') <> ''
+      )
       SELECT
         s.student_id,
         s.center_id,
@@ -641,6 +650,12 @@ const loadChildrenByChatId = async (chatId: number): Promise<ParentChildRecord[]
       FROM students s
       LEFT JOIN classes c ON c.class_id = s.class_id
       WHERE s.parent_telegram_chat_id = $1
+        OR EXISTS (
+          SELECT 1
+          FROM linked_parent_profiles lpp
+          WHERE regexp_replace(COALESCE(s.parent_phone, ''), '[^0-9]', '', 'g') = lpp.parent_phone_digits
+            AND s.parent_password_hash = lpp.parent_password_hash
+        )
       ORDER BY s.first_name ASC, s.last_name ASC, s.student_id ASC
     `,
     [chatId]
@@ -678,7 +693,11 @@ const ensureSessionForChat = async (chatId: number): Promise<ParentSession | nul
   }
 
   const children = await loadChildrenByChatId(chatId);
-  return createSession(chatId, children);
+  const session = createSession(chatId, children);
+  if (session) {
+    await linkParentChat(chatId, children, session.language);
+  }
+  return session;
 };
 
 const linkParentChat = async (
@@ -704,6 +723,53 @@ const linkParentChat = async (
   );
 
   parentLanguagePreferences.set(chatId, language);
+};
+
+export const linkExistingParentTelegramChatForStudent = async (studentId: number) => {
+  await ensureParentBotSchema();
+
+  await botDb.query(
+    `
+      WITH target_student AS (
+        SELECT
+          student_id,
+          regexp_replace(COALESCE(parent_phone, ''), '[^0-9]', '', 'g') AS parent_phone_digits,
+          parent_password_hash
+        FROM students
+        WHERE student_id = $1
+          AND parent_password_hash IS NOT NULL
+          AND regexp_replace(COALESCE(parent_phone, ''), '[^0-9]', '', 'g') <> ''
+      ),
+      linked_parent AS (
+        SELECT
+          s.parent_telegram_chat_id,
+          s.parent_telegram_language
+        FROM students s
+        JOIN target_student ts
+          ON regexp_replace(COALESCE(s.parent_phone, ''), '[^0-9]', '', 'g') = ts.parent_phone_digits
+         AND s.parent_password_hash = ts.parent_password_hash
+        WHERE s.student_id <> ts.student_id
+          AND s.parent_telegram_chat_id IS NOT NULL
+        ORDER BY
+          s.parent_telegram_last_login_at DESC NULLS LAST,
+          s.parent_telegram_verified_at DESC NULLS LAST,
+          s.student_id ASC
+        LIMIT 1
+      )
+      UPDATE students s
+      SET
+        parent_telegram_chat_id = linked_parent.parent_telegram_chat_id,
+        parent_telegram_verified_at = COALESCE(s.parent_telegram_verified_at, CURRENT_TIMESTAMP),
+        parent_telegram_language = COALESCE(linked_parent.parent_telegram_language, s.parent_telegram_language, 'uz')
+      FROM linked_parent
+      WHERE s.student_id = $1
+        AND (
+          s.parent_telegram_chat_id IS NULL
+          OR s.parent_telegram_chat_id <> linked_parent.parent_telegram_chat_id
+        )
+    `,
+    [studentId]
+  );
 };
 
 const updateParentLanguageForChat = async (chatId: number, language: ParentLanguage) => {
@@ -756,6 +822,7 @@ const loadParentChildrenForSession = async (session: ParentSession): Promise<Par
     if (!session.studentIds.includes(session.activeStudentId)) {
       session.activeStudentId = session.studentIds[0];
     }
+    await linkParentChat(session.chatId, children, session.language);
   }
   return children;
 };
