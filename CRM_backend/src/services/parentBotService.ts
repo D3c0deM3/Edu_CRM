@@ -1510,7 +1510,7 @@ export const runParentPaymentReminderSweep = async (options: { centerId?: number
       await sendParentNotification(
         student.student_id,
         'payment_reminder',
-        `payment-reminder:${student.student_id}:${dueDateValue}`,
+        `payment-reminder:${student.student_id}:${dueDateValue}:${warningDays}`,
         [
           interpolate(text.paymentReminder, {
             name: `${student.first_name} ${student.last_name}`,
